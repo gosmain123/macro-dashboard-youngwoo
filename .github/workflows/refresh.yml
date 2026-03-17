@@ -11,5 +11,6 @@ jobs:
     steps:
       - name: Call refresh endpoint
         run: |
-          curl -X POST "${{ secrets.REFRESH_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          curl -f -X POST "${{ secrets.REFRESH_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "x-vercel-protection-bypass: ${{ secrets.VERCEL_BYPASS_SECRET }}"
