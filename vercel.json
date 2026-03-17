@@ -1,12 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/refresh?scope=market",
-      "schedule": "15 0,4,8,12,16,20 * * 1-5"
-    },
-    {
-      "path": "/api/cron/refresh?scope=daily",
-      "schedule": "10 22 * * *"
-    }
-  ]
-}
+{}
