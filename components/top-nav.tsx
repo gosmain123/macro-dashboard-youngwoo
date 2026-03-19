@@ -3,13 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { UserModeToggle } from "@/components/user-mode-toggle";
 import { macroModules } from "@/lib/data/modules";
 import { cn } from "@/lib/utils";
 
 const primaryModuleSlugs = ["inflation", "growth", "labor", "rates-credit"] as const;
+const layerLinks = [
+  { href: "/liquidity", label: "Liquidity" },
+  { href: "/global-spillover", label: "FX & Commodities" },
+  { href: "/policy-expectations", label: "Policy Expectations" },
+  { href: "/positioning", label: "Positioning" }
+] as const;
 
 const topLinks = [
   { href: "/", label: "Dashboard" },
+  { href: "/playbook", label: "Playbook" },
   { href: "/workflow", label: "Workflow" },
   ...primaryModuleSlugs.map((slug) => {
     const moduleEntry = macroModules.find((entry) => entry.slug === slug);
@@ -19,6 +27,7 @@ const topLinks = [
       label: moduleEntry?.title ?? slug
     };
   }),
+  ...layerLinks,
   { href: "/calendar", label: "Calendar" }
 ];
 
@@ -35,6 +44,12 @@ export function TopNav() {
             </div>
             <div className="text-lg font-semibold text-white">Daily macro monitor</div>
           </Link>
+          <div className="hidden sm:block">
+            <UserModeToggle />
+          </div>
+        </div>
+        <div className="sm:hidden">
+          <UserModeToggle />
         </div>
         <nav className="flex gap-2 overflow-x-auto pb-1">
           {topLinks.map((link) => {

@@ -2,6 +2,8 @@ import { cache } from "react";
 
 import { getDashboardPayload } from "@/lib/dashboard";
 import { macroModules } from "@/lib/data/modules";
+import { getHistoricalContext, getIndicatorSourceType } from "@/lib/indicator-insight";
+import { getFollowUpLogic, getLogicChainForIndicator, getLogicChainHref } from "@/lib/playbook-guide";
 import { curatedHeadlines, releaseSnapshotInputs } from "@/lib/workflow-data";
 import { formatChange, formatDateLabel, formatIndicatorValue, formatReleaseLabel } from "@/lib/utils";
 import type {
@@ -72,7 +74,12 @@ function deriveSurprise(
   indicator: MacroIndicator,
   consensusValue?: number | null
 ): { flag: ReleaseSurpriseFlag; magnitude?: number | null } {
-  if (consensusValue === null || consensusValue === undefined || indicator.dataStatus === "fallback") {
+  if (
+    consensusValue === null ||
+    consensusValue === undefined ||
+    indicator.dataStatus === "fallback" ||
+    indicator.dataStatus === "error"
+  ) {
     return { flag: "pending", magnitude: null };
   }
 
@@ -120,12 +127,19 @@ function buildReleaseRadarItem(
   indicatorMap: Map<string, MacroIndicator>
 ): WorkflowReleaseRadarItem {
   const snapshot = snapshotBySlug[indicator.slug];
+  const followUpLogic = getFollowUpLogic(indicator.slug);
+  const logicChain = getLogicChainForIndicator(indicator.slug);
   const surprise = deriveSurprise(indicator, snapshot?.consensusValue);
+  const context = getHistoricalContext(indicator);
   const sourceName = indicator.release.sourceName ?? indicator.source.name;
   const sourceUrl = indicator.release.sourceUrl ?? indicator.source.url;
   const note =
     indicator.dataStatus === "fallback"
       ? "Latest print is visible, but the row is clearly marked fallback until the live feed syncs."
+      : indicator.dataStatus === "stale-live"
+        ? "The row is serving the last good live value because the newest refresh failed or aged out."
+        : indicator.dataStatus === "error"
+          ? "The live provider failed and no valid live cache exists yet, so the row is flagged error."
       : snapshot?.consensusValue !== null && snapshot?.consensusValue !== undefined
         ? "Consensus is available for the latest release snapshot; next-release consensus can be added when a market preview feed is connected."
         : "Official release timing is available now; consensus will populate when a preview feed is connected.";
@@ -136,18 +150,42 @@ function buildReleaseRadarItem(
     indicatorName: indicator.name,
     module: indicator.module,
     moduleTitle: moduleTitleBySlug[indicator.module],
+    moduleHref: `/${indicator.module}`,
+    playbookLabel: logicChain?.title ?? "Open Playbook",
+    playbookHref: logicChain ? getLogicChainHref(logicChain.id) : "/playbook",
     sourceName,
     sourceUrl,
+    sourceType: getIndicatorSourceType(indicator),
+    updatedAt: indicator.updatedAt,
+    freshnessAgeMinutes: indicator.freshnessAgeMinutes,
+    nextReleaseAt: indicator.nextReleaseAt,
     nextReleaseDate: indicator.release.nextReleaseDate,
     timeLabel: indicator.release.timeLabel,
+    actualValue: indicator.currentValue,
     priorValue: indicator.priorValue,
+    revisedPriorValue: snapshot?.revisedTo ?? null,
     latestActualValue: indicator.currentValue,
     consensusValue: snapshot?.consensusValue ?? null,
+    threeMonthAverageSurprise: snapshot?.threeMonthAverageSurprise ?? null,
     unit: indicator.unit,
     unitLabel: indicator.unitLabel,
     revisionFlag: deriveRevisionFlag(snapshot?.revisedFrom, snapshot?.revisedTo),
     surpriseFlag: surprise.flag,
     surpriseMagnitude: surprise.magnitude,
+    releaseState: indicator.release.nextReleaseDate ? "pending-release" : "schedule-pending",
+    previewState:
+      snapshot?.consensusValue !== null && snapshot?.consensusValue !== undefined ? "connected" : "preview-feed-missing",
+    historicalPercentile: context.percentile,
+    historicalPercentileLabel: context.percentileLabel,
+    historicalZScore: context.zScore,
+    historicalZScoreLabel: context.zScoreLabel,
+    historicalBand: context.band,
+    historicalContextLabel: context.contextLabel,
+    whyThisMattersToday: snapshot?.whyItMatters ?? indicator.summary,
+    whatToConfirmNext:
+      followUpLogic?.confirmation ??
+      followUpLogic?.nextCheck ??
+      "Confirm the move in rates, credit, and the linked indicators after the release.",
     linkedIndicators: toIndicatorLabels(snapshot?.linkedIndicators ?? [indicator.slug], indicatorMap),
     note,
     status: indicator.status
@@ -165,26 +203,48 @@ function buildSurpriseItem(
   }
 
   const surprise = deriveSurprise(indicator, snapshot.consensusValue);
+  const followUpLogic = getFollowUpLogic(indicator.slug);
+  const logicChain = getLogicChainForIndicator(indicator.slug);
+  const context = getHistoricalContext(indicator);
 
   return {
     id: `surprise-${indicator.slug}`,
     indicatorSlug: indicator.slug,
     indicatorName: indicator.name,
     category: getSurpriseCategory(indicator),
+    moduleHref: `/${indicator.module}`,
+    playbookLabel: logicChain?.title ?? "Open Playbook",
+    playbookHref: logicChain ? getLogicChainHref(logicChain.id) : "/playbook",
     releaseDate: snapshot.releaseDate,
     sourceName: snapshot.sourceName,
     sourceUrl: snapshot.sourceUrl,
+    sourceType: getIndicatorSourceType(indicator),
+    updatedAt: indicator.updatedAt,
+    freshnessAgeMinutes: indicator.freshnessAgeMinutes,
+    nextReleaseAt: indicator.nextReleaseAt,
     actualValue: indicator.currentValue,
     priorValue: indicator.priorValue,
     consensusValue: snapshot.consensusValue ?? null,
     revisedFrom: snapshot.revisedFrom ?? null,
     revisedTo: snapshot.revisedTo ?? null,
+    revisedPriorValue: snapshot.revisedTo ?? null,
+    threeMonthAverageSurprise: snapshot.threeMonthAverageSurprise ?? null,
     revisionFlag: deriveRevisionFlag(snapshot.revisedFrom, snapshot.revisedTo),
     surpriseFlag: surprise.flag,
     surpriseMagnitude: surprise.magnitude,
     unit: indicator.unit,
     unitLabel: indicator.unitLabel,
     whyItMatters: snapshot.whyItMatters,
+    whatToConfirmNext:
+      followUpLogic?.confirmation ??
+      followUpLogic?.nextCheck ??
+      "Confirm the macro message in rates, credit, and the linked indicators.",
+    historicalPercentile: context.percentile,
+    historicalPercentileLabel: context.percentileLabel,
+    historicalZScore: context.zScore,
+    historicalZScoreLabel: context.zScoreLabel,
+    historicalBand: context.band,
+    historicalContextLabel: context.contextLabel,
     linkedIndicators: toIndicatorLabels(snapshot.linkedIndicators, indicatorMap),
     status: indicator.status
   };

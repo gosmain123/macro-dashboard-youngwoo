@@ -120,6 +120,29 @@ export function formatTimestamp(value: string) {
   }).format(parsed);
 }
 
+export function formatFreshnessAge(minutes: number) {
+  if (!Number.isFinite(minutes) || minutes < 0) {
+    return "Unavailable";
+  }
+
+  if (minutes < 1) {
+    return "just now";
+  }
+
+  if (minutes < 60) {
+    return `${minutes} min ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export function formatDateLabel(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",

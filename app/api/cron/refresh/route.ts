@@ -34,9 +34,14 @@ async function handleRefresh(request: NextRequest) {
   const scope =
     (request.nextUrl.searchParams.get("scope") as RefreshScope | null) ?? "all";
 
-  const result = await refreshIndicators(scope);
-
-  return NextResponse.json(result);
+  try {
+    const result = await refreshIndicators(scope);
+    return NextResponse.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Refresh failed.";
+    console.error(JSON.stringify({ event: "refresh_job_failed", scope, error: message }));
+    return NextResponse.json({ error: message, scope }, { status: 500 });
+  }
 }
 
 export async function GET(request: NextRequest) {

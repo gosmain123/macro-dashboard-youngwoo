@@ -1,18 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarClock, Clock3, Newspaper, Radar, Sparkles, TrendingUp } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronRight,
+  Clock3,
+  Newspaper,
+  Radar,
+  Sparkles,
+  TrendingUp
+} from "lucide-react";
 import type { ComponentType } from "react";
 import { useState } from "react";
 
-import { cn, formatDateLabel, formatIndicatorValue, formatReleaseLabel, formatTimestamp } from "@/lib/utils";
+import { MetaChip } from "@/components/meta-chip";
+import { WorkflowSurpriseHeatmap } from "@/components/workflow-surprise-heatmap";
+import { cn, formatDateLabel, formatFreshnessAge, formatIndicatorValue, formatReleaseLabel, formatTimestamp, titleCase } from "@/lib/utils";
 import type {
+  HistoricalContextBand,
+  IndicatorSourceType,
   ReleaseRevisionFlag,
   ReleaseSurpriseFlag,
   WorkflowChangeItem,
   WorkflowHeadlineItem,
   WorkflowPayload,
+  WorkflowPreviewState,
   WorkflowReleaseRadarItem,
+  WorkflowReleaseState,
   WorkflowSurpriseItem
 } from "@/types/macro";
 
@@ -25,40 +39,84 @@ const tabs: Array<{ id: WorkflowTabId; label: string; icon: ComponentType<{ clas
   { id: "changes", label: "What Changed", icon: Sparkles }
 ];
 
-function statusStyles(status: WorkflowReleaseRadarItem["status"]) {
-  if (status === "fallback" || status === "stale") {
-    return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+function statusTone(status: WorkflowReleaseRadarItem["status"]) {
+  if (status === "live") {
+    return "emerald" as const;
   }
 
-  return "border-emerald-300/30 bg-emerald-300/10 text-emerald-100";
+  if (status === "fallback" || status === "stale-live") {
+    return "amber" as const;
+  }
+
+  return "rose" as const;
 }
 
-function surpriseStyles(flag: ReleaseSurpriseFlag) {
+function sourceTypeTone(sourceType: IndicatorSourceType) {
+  if (sourceType === "official") {
+    return "emerald" as const;
+  }
+
+  if (sourceType === "market-implied") {
+    return "cyan" as const;
+  }
+
+  if (sourceType === "derived") {
+    return "amber" as const;
+  }
+
+  return "slate" as const;
+}
+
+function bandTone(band: HistoricalContextBand) {
+  if (band === "extreme") {
+    return "rose" as const;
+  }
+
+  if (band === "elevated") {
+    return "amber" as const;
+  }
+
+  if (band === "low") {
+    return "cyan" as const;
+  }
+
+  return "slate" as const;
+}
+
+function surpriseTone(flag: ReleaseSurpriseFlag) {
   if (flag === "above") {
-    return "border-cyan-300/30 bg-cyan-300/10 text-cyan-100";
+    return "cyan" as const;
   }
 
   if (flag === "below") {
-    return "border-fuchsia-300/30 bg-fuchsia-300/10 text-fuchsia-100";
+    return "rose" as const;
   }
 
   if (flag === "inline") {
-    return "border-emerald-300/30 bg-emerald-300/10 text-emerald-100";
+    return "emerald" as const;
   }
 
-  return "border-white/10 bg-white/5 text-slate-300";
+  return "slate" as const;
 }
 
-function revisionStyles(flag: ReleaseRevisionFlag) {
+function revisionTone(flag: ReleaseRevisionFlag) {
   if (flag === "revised") {
-    return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+    return "amber" as const;
   }
 
   if (flag === "none") {
-    return "border-emerald-300/30 bg-emerald-300/10 text-emerald-100";
+    return "emerald" as const;
   }
 
-  return "border-white/10 bg-white/5 text-slate-300";
+  return "slate" as const;
+}
+
+function previewTone(state: WorkflowPreviewState) {
+  return state === "connected" ? ("emerald" as const) : ("amber" as const);
+}
+
+function releaseStateTone(state: WorkflowReleaseState) {
+  return state === "pending-release" ? ("cyan" as const) : ("amber" as const);
 }
 
 function formatOptionalValue(value: number | null | undefined, unit: string) {
@@ -67,6 +125,36 @@ function formatOptionalValue(value: number | null | undefined, unit: string) {
   }
 
   return formatIndicatorValue(value, unit);
+}
+
+function formatOptionalSignedValue(value: number | null | undefined, unit: string) {
+  if (value === null || value === undefined) {
+    return "\u2014";
+  }
+
+  const sign = value > 0 ? "+" : "";
+
+  if (unit === "%" || unit === "usd" || unit === "usd/oz" || unit === "bps" || unit === "$tn" || unit === "$bn" || unit === "k") {
+    return `${sign}${formatIndicatorValue(value, unit)}`;
+  }
+
+  return `${sign}${value.toFixed(1)}`;
+}
+
+function formatContextZScore(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "\u2014";
+  }
+
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
+}
+
+function formatReleaseState(state: WorkflowReleaseState) {
+  return state === "pending-release" ? "Pending release" : "Schedule pending";
+}
+
+function formatPreviewState(state: WorkflowPreviewState) {
+  return state === "connected" ? "Preview connected" : "Preview missing";
 }
 
 function countNextWeek(items: WorkflowReleaseRadarItem[], updatedAt: string) {
@@ -127,10 +215,137 @@ function groupChanges(items: WorkflowChangeItem[]) {
   );
 }
 
+function ReleaseRadarCard({ item }: { item: WorkflowReleaseRadarItem }) {
+  return (
+    <article className="rounded-[28px] border border-white/10 bg-white/6 p-5 shadow-soft backdrop-blur-xl">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap gap-2">
+            <MetaChip label="Module" value={item.moduleTitle} tone="cyan" />
+            <MetaChip label="Source" value={titleCase(item.sourceType)} tone={sourceTypeTone(item.sourceType)} />
+            <MetaChip label="Status" value={item.status} tone={statusTone(item.status)} />
+            <MetaChip label="Context" value={item.historicalContextLabel} tone={bandTone(item.historicalBand)} />
+          </div>
+          <h2 className="mt-4 text-2xl font-semibold text-white">{item.indicatorName}</h2>
+          <p className="mt-2 text-sm text-slate-300">
+            {item.nextReleaseDate ? formatReleaseLabel(item.nextReleaseDate, item.timeLabel) : "Official schedule pending"}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <MetaChip label="Release" value={formatReleaseState(item.releaseState)} tone={releaseStateTone(item.releaseState)} />
+          <MetaChip label="Preview" value={formatPreviewState(item.previewState)} tone={previewTone(item.previewState)} />
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Actual</p>
+          <p className="mt-2 text-sm font-medium text-white">{formatIndicatorValue(item.actualValue, item.unit)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Prior</p>
+          <p className="mt-2 text-sm font-medium text-white">{formatIndicatorValue(item.priorValue, item.unit)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Revised prior</p>
+          <p className="mt-2 text-sm font-medium text-white">{formatOptionalValue(item.revisedPriorValue, item.unit)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Consensus</p>
+          <p className="mt-2 text-sm font-medium text-white">{formatOptionalValue(item.consensusValue, item.unit)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Surprise</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <MetaChip label="Flag" value={item.surpriseFlag} tone={surpriseTone(item.surpriseFlag)} />
+            <span className="text-sm font-medium text-white">{formatOptionalSignedValue(item.surpriseMagnitude, item.unit)}</span>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">3m avg surprise</p>
+          <p className="mt-2 text-sm font-medium text-white">
+            {formatOptionalSignedValue(item.threeMonthAverageSurprise, item.unit)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <MetaChip label={item.historicalPercentileLabel ?? "Pct"} value={item.historicalPercentile !== null && item.historicalPercentile !== undefined ? `${item.historicalPercentile}` : "\u2014"} tone={bandTone(item.historicalBand)} />
+        <MetaChip label={item.historicalZScoreLabel ?? "Z"} value={formatContextZScore(item.historicalZScore)} tone={bandTone(item.historicalBand)} />
+        <MetaChip label="Revision" value={item.revisionFlag} tone={revisionTone(item.revisionFlag)} />
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Updated</p>
+          <p className="mt-2 text-sm text-slate-200">{formatTimestamp(item.updatedAt)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Freshness age</p>
+          <p className="mt-2 text-sm text-slate-200">{formatFreshnessAge(item.freshnessAgeMinutes)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Next release</p>
+          <p className="mt-2 text-sm text-slate-200">{item.nextReleaseAt ? formatTimestamp(item.nextReleaseAt) : "Schedule pending"}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Source name</p>
+          {item.sourceUrl ? (
+            <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 text-sm text-slate-200 transition hover:text-white">
+              {item.sourceName}
+            </a>
+          ) : (
+            <p className="mt-2 text-sm text-slate-200">{item.sourceName}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 xl:grid-cols-2">
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-200">Why this matters today</p>
+          <p className="mt-2 text-sm leading-6 text-slate-200">{item.whyThisMattersToday}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-200">What to confirm next</p>
+          <p className="mt-2 text-sm leading-6 text-slate-200">{item.whatToConfirmNext}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Linked checks</p>
+          <p className="mt-2 text-sm text-slate-200">{item.linkedIndicators.join(" | ")}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">{item.note}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={item.moduleHref}
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-200 transition hover:border-white/20 hover:text-white"
+          >
+            Open module
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+          <Link
+            href={item.playbookHref}
+            className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/40"
+          >
+            {item.playbookLabel}
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function ReleaseRadarTab({ items, updatedAt }: { items: WorkflowReleaseRadarItem[]; updatedAt: string }) {
   const nextRelease = items[0];
   const consensusCoverage = items.filter((item) => item.consensusValue !== null && item.consensusValue !== undefined).length;
+  const previewConnected = items.filter((item) => item.previewState === "connected").length;
   const fallbackCount = items.filter((item) => item.status === "fallback").length;
+  const staleLiveCount = items.filter((item) => item.status === "stale-live").length;
+  const errorCount = items.filter((item) => item.status === "error").length;
 
   return (
     <div className="space-y-5">
@@ -145,100 +360,134 @@ function ReleaseRadarTab({ items, updatedAt }: { items: WorkflowReleaseRadarItem
         <div className="rounded-[26px] border border-white/10 bg-white/6 p-5 shadow-soft backdrop-blur-xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">This week</p>
           <p className="mt-3 text-lg font-semibold text-white">{countNextWeek(items, updatedAt)} scheduled releases</p>
-          <p className="mt-2 text-sm text-slate-300">Based on tracked official release calendars.</p>
+          <p className="mt-2 text-sm text-slate-300">Rows now separate release timing from preview-feed coverage.</p>
         </div>
         <div className="rounded-[26px] border border-white/10 bg-white/6 p-5 shadow-soft backdrop-blur-xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">Consensus coverage</p>
           <p className="mt-3 text-lg font-semibold text-white">{consensusCoverage} / {items.length}</p>
-          <p className="mt-2 text-sm text-slate-300">Blank consensus fields stay explicit until a preview feed is connected.</p>
+          <p className="mt-2 text-sm text-slate-300">{previewConnected} rows have structured preview context connected.</p>
         </div>
         <div className="rounded-[26px] border border-white/10 bg-white/6 p-5 shadow-soft backdrop-blur-xl">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">Fallback rows</p>
-          <p className="mt-3 text-lg font-semibold text-white">{fallbackCount}</p>
-          <p className="mt-2 text-sm text-slate-300">Rows still show source and status so trust checks stay quick.</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">Fallback / stale / error</p>
+          <p className="mt-3 text-lg font-semibold text-white">{fallbackCount} / {staleLiveCount} / {errorCount}</p>
+          <p className="mt-2 text-sm text-slate-300">Trust badges stay visible so last-good live is never confused with fallback.</p>
         </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
         {items.map((item) => (
-          <article key={item.id} className="rounded-[28px] border border-white/10 bg-white/6 p-5 shadow-soft backdrop-blur-xl">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-200">
-                    {item.moduleTitle}
-                  </span>
-                  <span className={cn("rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em]", statusStyles(item.status))}>
-                    {item.status}
-                  </span>
-                </div>
-                <h2 className="mt-4 text-2xl font-semibold text-white">{item.indicatorName}</h2>
-                <p className="mt-2 text-sm text-slate-300">
-                  {item.nextReleaseDate ? formatReleaseLabel(item.nextReleaseDate, item.timeLabel) : "Official schedule pending"}
-                </p>
-              </div>
-              <Link
-                href={`/${item.module}`}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-200 transition hover:border-white/20 hover:text-white"
-              >
-                Open module
-              </Link>
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Latest actual</p>
-                <p className="mt-2 text-sm font-medium text-white">{formatIndicatorValue(item.latestActualValue, item.unit)}</p>
-                <p className="mt-1 text-xs text-slate-500">{item.unitLabel}</p>
-              </div>
-              <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Prior</p>
-                <p className="mt-2 text-sm font-medium text-white">{formatIndicatorValue(item.priorValue, item.unit)}</p>
-                <p className="mt-1 text-xs text-slate-500">Last published comparison</p>
-              </div>
-              <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Consensus</p>
-                <p className="mt-2 text-sm font-medium text-white">{formatOptionalValue(item.consensusValue, item.unit)}</p>
-                <p className="mt-1 text-xs text-slate-500">If available from tracked previews</p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className={cn("rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em]", surpriseStyles(item.surpriseFlag))}>
-                Surprise: {item.surpriseFlag}
-              </span>
-              <span className={cn("rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em]", revisionStyles(item.revisionFlag))}>
-                Revision: {item.revisionFlag}
-              </span>
-              {item.surpriseMagnitude !== null && item.surpriseMagnitude !== undefined ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-slate-300">
-                  Magnitude {formatOptionalValue(item.surpriseMagnitude, item.unit)}
-                </span>
-              ) : null}
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Source</p>
-                {item.sourceUrl ? (
-                  <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 text-sm text-slate-200 transition hover:text-white">
-                    {item.sourceName}
-                  </a>
-                ) : (
-                  <p className="mt-2 text-sm text-slate-200">{item.sourceName}</p>
-                )}
-              </div>
-              <div className="text-left sm:text-right">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Linked workflow</p>
-                <p className="mt-2 text-sm text-slate-200">{item.linkedIndicators.join(" · ")}</p>
-              </div>
-            </div>
-
-            <p className="mt-4 text-sm leading-6 text-slate-300">{item.note}</p>
-          </article>
+          <ReleaseRadarCard key={item.id} item={item} />
         ))}
       </div>
     </div>
+  );
+}
+
+function SurpriseCard({ item }: { item: WorkflowSurpriseItem }) {
+  return (
+    <article className="rounded-[28px] border border-white/10 bg-white/6 p-5 shadow-soft backdrop-blur-xl">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap gap-2">
+            <MetaChip label="Source" value={titleCase(item.sourceType)} tone={sourceTypeTone(item.sourceType)} />
+            <MetaChip label="Status" value={item.status} tone={statusTone(item.status)} />
+            <MetaChip label="Context" value={item.historicalContextLabel} tone={bandTone(item.historicalBand)} />
+            <MetaChip label="Surprise" value={item.surpriseFlag} tone={surpriseTone(item.surpriseFlag)} />
+          </div>
+          <h2 className="mt-4 text-2xl font-semibold text-white">{item.indicatorName}</h2>
+          <p className="mt-2 text-sm text-slate-300">{formatDateLabel(item.releaseDate)}</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <MetaChip label="Revision" value={item.revisionFlag} tone={revisionTone(item.revisionFlag)} />
+          <MetaChip label={item.historicalPercentileLabel ?? "Pct"} value={item.historicalPercentile !== null && item.historicalPercentile !== undefined ? `${item.historicalPercentile}` : "\u2014"} tone={bandTone(item.historicalBand)} />
+          <MetaChip label={item.historicalZScoreLabel ?? "Z"} value={formatContextZScore(item.historicalZScore)} tone={bandTone(item.historicalBand)} />
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Actual</p>
+          <p className="mt-2 text-sm font-medium text-white">{formatIndicatorValue(item.actualValue, item.unit)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Prior</p>
+          <p className="mt-2 text-sm font-medium text-white">{formatIndicatorValue(item.priorValue, item.unit)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Revised prior</p>
+          <p className="mt-2 text-sm font-medium text-white">{formatOptionalValue(item.revisedPriorValue, item.unit)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Consensus</p>
+          <p className="mt-2 text-sm font-medium text-white">{formatOptionalValue(item.consensusValue, item.unit)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Surprise</p>
+          <p className="mt-2 text-sm font-medium text-white">{formatOptionalSignedValue(item.surpriseMagnitude, item.unit)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">3m avg surprise</p>
+          <p className="mt-2 text-sm font-medium text-white">{formatOptionalSignedValue(item.threeMonthAverageSurprise, item.unit)}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Updated</p>
+          <p className="mt-2 text-sm text-slate-200">{formatTimestamp(item.updatedAt)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Freshness age</p>
+          <p className="mt-2 text-sm text-slate-200">{formatFreshnessAge(item.freshnessAgeMinutes)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Next release</p>
+          <p className="mt-2 text-sm text-slate-200">{item.nextReleaseAt ? formatTimestamp(item.nextReleaseAt) : "Schedule pending"}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 xl:grid-cols-2">
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-200">Why this matters today</p>
+          <p className="mt-2 text-sm leading-6 text-slate-200">{item.whyItMatters}</p>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-200">What to confirm next</p>
+          <p className="mt-2 text-sm leading-6 text-slate-200">{item.whatToConfirmNext}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Linked checks</p>
+          <p className="mt-2 text-sm text-slate-200">{item.linkedIndicators.join(" | ")}</p>
+          {item.sourceUrl ? (
+            <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-slate-500 transition hover:text-slate-300">
+              {item.sourceName}
+            </a>
+          ) : (
+            <p className="mt-2 text-xs text-slate-500">{item.sourceName}</p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={item.moduleHref}
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-200 transition hover:border-white/20 hover:text-white"
+          >
+            Open module
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+          <Link
+            href={item.playbookHref}
+            className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/40"
+          >
+            {item.playbookLabel}
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -250,7 +499,7 @@ function SurprisesTab({ items }: { items: WorkflowSurpriseItem[] }) {
       <div className="rounded-[28px] border border-white/10 bg-white/6 p-5 shadow-soft backdrop-blur-xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">Recent releases</p>
         <p className="mt-3 text-sm leading-6 text-slate-300">
-          Actuals come from the current indicator feed. Consensus and revision fields stay visibly blank or pending when a structured release snapshot is not yet connected.
+          Every release card now shows actual, prior, revised prior, consensus, surprise, 3m average surprise, trust state, and the next thing to confirm.
         </p>
       </div>
 
@@ -261,49 +510,7 @@ function SurprisesTab({ items }: { items: WorkflowSurpriseItem[] }) {
           </div>
           <div className="grid gap-4 xl:grid-cols-2">
             {categoryItems.map((item) => (
-              <article key={item.id} className="rounded-[28px] border border-white/10 bg-white/6 p-5 shadow-soft backdrop-blur-xl">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap gap-2">
-                      <span className={cn("rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em]", statusStyles(item.status))}>
-                        {item.status}
-                      </span>
-                      <span className={cn("rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em]", surpriseStyles(item.surpriseFlag))}>
-                        Surprise: {item.surpriseFlag}
-                      </span>
-                      <span className={cn("rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em]", revisionStyles(item.revisionFlag))}>
-                        Revision: {item.revisionFlag}
-                      </span>
-                    </div>
-                    <h2 className="mt-4 text-2xl font-semibold text-white">{item.indicatorName}</h2>
-                    <p className="mt-2 text-sm text-slate-300">{formatDateLabel(item.releaseDate)}</p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Actual</p>
-                    <p className="mt-2 text-sm font-medium text-white">{formatIndicatorValue(item.actualValue, item.unit)}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Consensus</p>
-                    <p className="mt-2 text-sm font-medium text-white">{formatOptionalValue(item.consensusValue, item.unit)}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Prior</p>
-                    <p className="mt-2 text-sm font-medium text-white">{formatIndicatorValue(item.priorValue, item.unit)}</p>
-                  </div>
-                </div>
-
-                <p className="mt-4 text-sm leading-6 text-slate-300">{item.whyItMatters}</p>
-
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="text-sm text-slate-200 transition hover:text-white">
-                    {item.sourceName}
-                  </a>
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{item.linkedIndicators.join(" · ")}</p>
-                </div>
-              </article>
+              <SurpriseCard key={item.id} item={item} />
             ))}
           </div>
         </section>
@@ -325,20 +532,21 @@ function HeadlinesTab({ items }: { items: WorkflowHeadlineItem[] }) {
           <div className="grid gap-4 xl:grid-cols-2">
             {bucketItems.map((item) => (
               <article key={item.id} className="rounded-[28px] border border-white/10 bg-white/6 p-5 shadow-soft backdrop-blur-xl">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                      {item.sourceName} · {formatTimestamp(item.publishedAt)}
+                      {item.sourceName} | {formatTimestamp(item.publishedAt)}
                     </p>
                     <h2 className="mt-3 text-2xl font-semibold text-white">{item.title}</h2>
                   </div>
+                  <MetaChip label="Bucket" value={bucket} tone="cyan" />
                 </div>
                 <p className="mt-4 text-sm leading-6 text-slate-300">{item.whyItMatters}</p>
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                   <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="text-sm text-slate-200 transition hover:text-white">
                     Open source
                   </a>
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{item.linkedIndicators.join(" · ")}</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{item.linkedIndicators.join(" | ")}</p>
                 </div>
               </article>
             ))}
@@ -364,7 +572,7 @@ function ChangesTab({ items }: { items: WorkflowChangeItem[] }) {
               <article key={item.id} className="rounded-[28px] border border-white/10 bg-white/6 p-5 shadow-soft backdrop-blur-xl">
                 <h2 className="text-xl font-semibold text-white">{item.title}</h2>
                 <p className="mt-3 text-sm leading-6 text-slate-300">{item.detail}</p>
-                <p className="mt-5 text-xs uppercase tracking-[0.18em] text-slate-500">{item.linkedIndicators.join(" · ")}</p>
+                <p className="mt-5 text-xs uppercase tracking-[0.18em] text-slate-500">{item.linkedIndicators.join(" | ")}</p>
               </article>
             ))}
           </div>
@@ -384,8 +592,8 @@ export function WorkflowBoard({ payload }: { payload: WorkflowPayload }) {
         <div className="rounded-[34px] border border-white/10 bg-white/5 p-6 shadow-soft backdrop-blur-xl md:p-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-200">Workflow</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">Daily macro workflow</h1>
-          <p className="mt-4 max-w-3xl text-lg leading-7 text-slate-300">
-            Move from what matters next, to what surprised, to what credible desks and official sources are saying, without leaving the dashboard.
+          <p className="mt-4 max-w-3xl text-lg leading-7 text-slate-300 mode-beginner-only">
+            Read the release, compare it with prior and consensus, check whether the surprise is real, then confirm the move in the next part of the dashboard.
           </p>
         </div>
 
@@ -405,13 +613,20 @@ export function WorkflowBoard({ payload }: { payload: WorkflowPayload }) {
               {nextRelease ? formatReleaseLabel(nextRelease.nextReleaseDate, nextRelease.timeLabel) : "No event scheduled"}
             </p>
           </div>
-          <p className="mt-4 text-sm leading-6 text-slate-300">
-            Headlines stay curated and low-noise. Release rows keep source, status, and missing-consensus states visible.
+          <div className="mt-4 flex flex-wrap gap-2">
+            <MetaChip label="Trust" value="Visible" tone="emerald" />
+            <MetaChip label="Preview gap" value="Explicit" tone="amber" />
+            <MetaChip label="Follow-up" value="Linked" tone="cyan" />
+          </div>
+          <p className="mt-4 text-sm leading-6 text-slate-300 mode-beginner-only">
+            Pending release timing and missing preview coverage are now shown as separate states so users can tell whether data is simply not out yet or not connected.
           </p>
         </aside>
       </section>
 
       <section className="space-y-5">
+        <WorkflowSurpriseHeatmap items={payload.surprises} updatedAt={payload.updatedAt} />
+
         <nav className="flex flex-wrap gap-2" aria-label="Workflow tabs">
           {tabs.map((tab) => {
             const active = activeTab === tab.id;
@@ -445,3 +660,5 @@ export function WorkflowBoard({ payload }: { payload: WorkflowPayload }) {
     </div>
   );
 }
+
+

@@ -1,9 +1,9 @@
 import { calendarEvents, macroIndicators, macroModules, playbooks } from "@/lib/data";
-import { defaultRegimeSnapshot, deriveRegimeCards } from "@/lib/regime";
-import type { DashboardPayload, FreshnessStatus, MacroIndicator } from "@/types/macro";
+import { defaultRegimeSnapshot, deriveRegimeCards, deriveRegimeSnapshot } from "@/lib/regime";
+import { STALE_AFTER_MINUTES, clampMinutesSinceUpdate, freshnessStatus } from "@/lib/server/data-status";
+import type { DashboardPayload, MacroIndicator } from "@/types/macro";
 
 const refreshCadence = "Auto-refresh every 10 min";
-const staleAfterMinutes = 20;
 const homepageWatchlistSlugs = [
   "core-pce",
   "cpi-headline",
@@ -24,20 +24,6 @@ const homepageEventIds = new Set([
   "ppi-release"
 ]);
 
-function clampMinutesSinceUpdate(lastUpdated: string) {
-  const updatedTime = new Date(lastUpdated).getTime();
-
-  if (Number.isNaN(updatedTime)) {
-    return 0;
-  }
-
-  return Math.max(0, Math.round((Date.now() - updatedTime) / 60000));
-}
-
-function freshnessStatus(minutesSinceUpdate: number): FreshnessStatus {
-  return minutesSinceUpdate > staleAfterMinutes ? "stale" : "fresh";
-}
-
 export function buildDashboardPayload(
   dataMode: "demo" | "live",
   indicators: MacroIndicator[] = macroIndicators,
@@ -46,31 +32,28 @@ export function buildDashboardPayload(
   const minutesSinceUpdate = clampMinutesSinceUpdate(lastUpdated);
   const currentFreshnessStatus = freshnessStatus(minutesSinceUpdate);
   const resolvedIndicators = indicators.map((indicator) => {
-    const indicatorFreshnessStatus =
-      indicator.dataStatus === "fallback" ? "stale" : freshnessStatus(minutesSinceUpdate);
-    const status =
-      indicator.dataStatus === "fallback"
-        ? "fallback"
-        : indicatorFreshnessStatus === "stale"
-          ? "stale"
-          : "live";
+    const indicatorFreshnessStatus = freshnessStatus(indicator.freshnessAgeMinutes);
 
     return {
       ...indicator,
-      freshnessStatus: indicatorFreshnessStatus,
-      status
+      freshnessStatus:
+        indicator.status === "fallback" || indicator.status === "error"
+          ? "stale"
+          : indicatorFreshnessStatus
     } as MacroIndicator;
   });
   const watchlist = homepageWatchlistSlugs
     .map((slug) => resolvedIndicators.find((indicator) => indicator.slug === slug))
     .filter((indicator): indicator is MacroIndicator => Boolean(indicator));
+  const regimeCards = deriveRegimeCards(resolvedIndicators);
 
   return {
     dataMode,
     modules: macroModules,
     indicators: resolvedIndicators,
-    regimeCards: deriveRegimeCards(resolvedIndicators),
-    regimeSnapshot: defaultRegimeSnapshot,
+    regimeCards,
+    regimeSnapshot:
+      resolvedIndicators.length > 0 ? deriveRegimeSnapshot(resolvedIndicators, regimeCards) : defaultRegimeSnapshot,
     calendarEvents,
     playbooks,
     homepage: {
@@ -83,12 +66,14 @@ export function buildDashboardPayload(
         lastUpdated,
         refreshCadence,
         freshnessStatus: currentFreshnessStatus,
-        staleAfterMinutes,
+        staleAfterMinutes: STALE_AFTER_MINUTES,
         minutesSinceUpdate,
         officialCount: watchlist.filter((indicator) => indicator.source.access === "official-free").length,
         manualCount: watchlist.filter((indicator) => indicator.source.access === "licensed-manual").length,
         liveCount: watchlist.filter((indicator) => indicator.dataStatus === "live").length,
-        fallbackCount: watchlist.filter((indicator) => indicator.dataStatus === "fallback").length
+        staleLiveCount: watchlist.filter((indicator) => indicator.dataStatus === "stale-live").length,
+        fallbackCount: watchlist.filter((indicator) => indicator.dataStatus === "fallback").length,
+        errorCount: watchlist.filter((indicator) => indicator.dataStatus === "error").length
       }
     }
   };

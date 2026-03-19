@@ -2,53 +2,43 @@ import type { PlaybookScenario } from "@/types/macro";
 
 export const playbooks: PlaybookScenario[] = [
   {
-    slug: "disinflation",
-    title: "Disinflation",
-    summary: "Growth holds up while inflation cools, allowing policy and valuation pressure to ease.",
+    slug: "soft-landing",
+    title: "Soft Landing",
+    summary: "Growth slows but does not break, inflation cools enough, and credit stays orderly.",
     marketPlaybook:
-      "Favor quality cyclicals, duration-sensitive growth, and credit that benefits from easier real-rate pressure.",
+      "Look for cooler core inflation, contained claims, stable payrolls, and credit spreads that do not widen materially.",
     riskWatch:
-      "The main risk is declaring victory too early before services inflation really cooperates.",
-    dashboardFocus: ["Core PCE", "Shelter", "2Y Yield", "Breadth"]
+      "The call weakens fast if claims rise and HY spreads start confirming stress instead of staying calm.",
+    dashboardFocus: ["Core PCE cooling", "Claims contained", "ISM stabilizing", "HY spreads calm"]
   },
   {
-    slug: "re-acceleration",
-    title: "Re-acceleration",
-    summary: "Growth re-accelerates enough to lift yields and revive inflation concerns.",
+    slug: "reflation",
+    title: "Reflation",
+    summary: "Growth firms again while inflation stops cooling cleanly, pushing yields and policy expectations back up.",
     marketPlaybook:
-      "Prefer value, financials, selective cyclicals, and inflation hedges over long-duration growth.",
+      "Look for stronger ISM, firmer payrolls, sticky core inflation, and 10Y yields moving higher without credit stress.",
     riskWatch:
-      "If growth re-accelerates alongside sticky inflation, the Fed can stay restrictive longer than markets expect.",
-    dashboardFocus: ["GDP Now", "ISM Manufacturing", "Oil", "2Y Yield"]
+      "If the front end reprices sharply and credit stops behaving, reflation can turn into a policy-tightening scare.",
+    dashboardFocus: ["ISM re-accelerating", "Payrolls firm", "Core inflation sticky", "10Y rising"]
   },
   {
-    slug: "growth-scare",
-    title: "Growth Scare",
-    summary: "Leading data softens quickly and markets start pricing faster policy relief.",
+    slug: "hard-landing",
+    title: "Hard Landing",
+    summary: "Labor and growth data deteriorate together and credit markets stop giving the economy the benefit of the doubt.",
     marketPlaybook:
-      "Rotate toward duration, defensives, and quality balance sheets while watching whether spreads confirm the scare.",
+      "Look for weaker payrolls, rising claims, softer ISM, a falling 2Y, and HY spreads that widen with the macro stress.",
     riskWatch:
-      "If credit starts to widen materially, the move stops being a benign rate-cut trade and becomes a genuine risk-off regime.",
-    dashboardFocus: ["Initial Claims", "3m10y", "HY Spreads", "Consumer Sentiment"]
+      "Do not call hard landing from one weak print if revisions, hours, and credit do not confirm it.",
+    dashboardFocus: ["Claims rising", "Payrolls weakening", "ISM below 50", "HY widening"]
   },
   {
-    slug: "stagflation",
-    title: "Stagflation",
-    summary: "Growth slows while inflation stays sticky, leaving policymakers trapped.",
+    slug: "stagflation-lite",
+    title: "Stagflation-Lite",
+    summary: "Growth cools but inflation stays sticky enough to keep policy and real yields uncomfortably high.",
     marketPlaybook:
-      "Reduce multiple exposure, prioritize pricing power, commodities, and selective real assets, and stay careful on credit.",
+      "Look for softening growth data, sticky core inflation, elevated 2Y and real yields, and only gradual deterioration in credit.",
     riskWatch:
-      "This is the hardest regime because both bonds and equities can struggle at the same time.",
-    dashboardFocus: ["Core CPI", "Oil", "Retail Sales", "Real Yield"]
-  },
-  {
-    slug: "liquidity-squeeze",
-    title: "Liquidity Squeeze",
-    summary: "Financial plumbing tightens before the macro data fully catches up.",
-    marketPlaybook:
-      "Respect higher volatility, narrower leadership, and the possibility that weak liquidity forces de-risking even without recession data.",
-    riskWatch:
-      "Liquidity stress tends to hit crowded trades and lower-quality balance sheets first.",
-    dashboardFocus: ["Net Liquidity", "TGA", "MOVE", "Crowding Flags"]
+      "This regime is easy to misread because both growth fear and inflation pressure are present at the same time.",
+    dashboardFocus: ["Core inflation sticky", "Growth softening", "2Y still elevated", "Credit only slowly worsening"]
   }
 ];

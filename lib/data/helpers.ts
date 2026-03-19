@@ -8,9 +8,16 @@ export type IndicatorBlueprint = Omit<
   | "chartHistory"
   | "searchTerms"
   | "lastUpdated"
+  | "updatedAt"
+  | "nextReleaseAt"
+  | "freshnessAgeMinutes"
   | "dataStatus"
   | "status"
   | "freshnessStatus"
+  | "lastSuccessfulFetch"
+  | "lastFailedFetch"
+  | "fallbackUsageReason"
+  | "errorMessage"
   | "release"
   | "unitLabel"
 > & {
@@ -282,9 +289,16 @@ export function buildIndicators(blueprints: IndicatorBlueprint[]): MacroIndicato
       chartHistory: points,
       unitLabel: blueprint.unitLabel ?? inferUnitLabel(blueprint.unit),
       lastUpdated: `${lastObservationDate}T00:00:00Z`,
+      updatedAt: `${lastObservationDate}T00:00:00Z`,
+      nextReleaseAt: undefined,
+      freshnessAgeMinutes: 0,
       dataStatus: "fallback",
       status: "fallback",
       freshnessStatus: "stale",
+      lastSuccessfulFetch: undefined,
+      lastFailedFetch: undefined,
+      fallbackUsageReason: "Seed/manual fallback value.",
+      errorMessage: undefined,
       release: getIndicatorRelease(blueprint.slug, blueprint.frequency, blueprint.releaseCadence),
       searchTerms: [blueprint.name, blueprint.shortName, ...(blueprint.searchTerms ?? [])]
     };

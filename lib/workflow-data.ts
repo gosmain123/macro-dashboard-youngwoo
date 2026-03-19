@@ -6,6 +6,7 @@ export type ReleaseSnapshotInput = {
   sourceName: string;
   sourceUrl: string;
   consensusValue?: number | null;
+  threeMonthAverageSurprise?: number | null;
   revisedFrom?: number | null;
   revisedTo?: number | null;
   linkedIndicators: string[];
@@ -18,7 +19,8 @@ export const releaseSnapshotInputs: ReleaseSnapshotInput[] = [
     releaseDate: "2026-03-11",
     sourceName: "BLS CPI release",
     sourceUrl: "https://www.bls.gov/news.release/cpi.nr0.htm",
-    consensusValue: 2.5,
+    consensusValue: 3.0,
+    threeMonthAverageSurprise: 0.1,
     linkedIndicators: ["core-cpi", "us-2y-treasury", "wti-oil"],
     whyItMatters: "Headline CPI still resets front-end rate expectations faster than almost any other scheduled macro release."
   },
@@ -27,6 +29,8 @@ export const releaseSnapshotInputs: ReleaseSnapshotInput[] = [
     releaseDate: "2026-03-11",
     sourceName: "BLS CPI release",
     sourceUrl: "https://www.bls.gov/news.release/cpi.nr0.htm",
+    consensusValue: 3.3,
+    threeMonthAverageSurprise: 0.1,
     linkedIndicators: ["cpi-headline", "avg-hourly-earnings", "us-2y-treasury"],
     whyItMatters: "Core CPI remains the cleaner read on sticky services pressure and the pace of the last-mile disinflation."
   },
@@ -35,6 +39,8 @@ export const releaseSnapshotInputs: ReleaseSnapshotInput[] = [
     releaseDate: "2026-03-18",
     sourceName: "BLS PPI release",
     sourceUrl: "https://www.bls.gov/news.release/ppi.nr0.htm",
+    consensusValue: 3.2,
+    threeMonthAverageSurprise: 0.2,
     linkedIndicators: ["core-pce", "us-2y-treasury", "wti-oil"],
     whyItMatters: "PPI helps investors judge whether pipeline inflation is easing or threatening to bleed back into PCE."
   },
@@ -43,6 +49,8 @@ export const releaseSnapshotInputs: ReleaseSnapshotInput[] = [
     releaseDate: "2026-03-13",
     sourceName: "BEA Personal Income and Outlays",
     sourceUrl: "https://www.bea.gov/index.php/news/schedule/full",
+    consensusValue: 2.7,
+    threeMonthAverageSurprise: 0.1,
     linkedIndicators: ["cpi-headline", "us-2y-treasury", "fed-funds-upper"],
     whyItMatters: "Core PCE maps most directly into the Fed reaction function and tends to anchor medium-term rate-cut pricing."
   },
@@ -51,6 +59,10 @@ export const releaseSnapshotInputs: ReleaseSnapshotInput[] = [
     releaseDate: "2026-03-06",
     sourceName: "BLS Employment Situation",
     sourceUrl: "https://www.bls.gov/news.release/empsit.nr0.htm",
+    consensusValue: 175,
+    threeMonthAverageSurprise: 9,
+    revisedFrom: 168,
+    revisedTo: 171,
     linkedIndicators: ["unemployment-rate", "avg-hourly-earnings", "initial-claims"],
     whyItMatters: "Payrolls remain the single densest macro release for judging whether growth is cooling or cracking."
   },
@@ -59,6 +71,8 @@ export const releaseSnapshotInputs: ReleaseSnapshotInput[] = [
     releaseDate: "2026-03-06",
     sourceName: "BLS Employment Situation",
     sourceUrl: "https://www.bls.gov/news.release/empsit.nr0.htm",
+    consensusValue: 4.1,
+    threeMonthAverageSurprise: 0,
     linkedIndicators: ["nonfarm-payrolls", "initial-claims", "avg-hourly-earnings"],
     whyItMatters: "The unemployment rate matters most when it changes regime quickly enough to alter the market's recession probability."
   },
@@ -67,6 +81,8 @@ export const releaseSnapshotInputs: ReleaseSnapshotInput[] = [
     releaseDate: "2026-03-06",
     sourceName: "BLS Employment Situation",
     sourceUrl: "https://www.bls.gov/news.release/empsit.nr0.htm",
+    consensusValue: 3.7,
+    threeMonthAverageSurprise: 0.1,
     linkedIndicators: ["nonfarm-payrolls", "core-cpi", "core-pce"],
     whyItMatters: "Average hourly earnings remain one of the cleanest monthly checks on labor-driven inflation persistence."
   },
@@ -75,8 +91,20 @@ export const releaseSnapshotInputs: ReleaseSnapshotInput[] = [
     releaseDate: "2026-03-19",
     sourceName: "Department of Labor weekly claims",
     sourceUrl: "https://www.dol.gov/newsroom/releases/eta",
+    consensusValue: 221,
+    threeMonthAverageSurprise: 4,
     linkedIndicators: ["nonfarm-payrolls", "unemployment-rate"],
     whyItMatters: "Claims are the fastest official labor series and often catch labor stress before payrolls visibly roll over."
+  },
+  {
+    indicatorSlug: "gdp-nowcast",
+    releaseDate: "2026-03-19",
+    sourceName: "Atlanta Fed GDPNow",
+    sourceUrl: "https://www.atlantafed.org/research-and-data/data/gdpnow",
+    consensusValue: 2.6,
+    threeMonthAverageSurprise: 0.1,
+    linkedIndicators: ["ism-manufacturing", "retail-sales", "us-10y-treasury"],
+    whyItMatters: "GDPNow is one of the fastest real-time checks on whether incoming hard data is building a softer or firmer growth path."
   },
   {
     indicatorSlug: "ism-manufacturing",
@@ -84,6 +112,7 @@ export const releaseSnapshotInputs: ReleaseSnapshotInput[] = [
     sourceName: "ISM Manufacturing PMI",
     sourceUrl: "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/pmi/february/",
     consensusValue: 51.8,
+    threeMonthAverageSurprise: 0.5,
     linkedIndicators: ["industrial-production", "durable-goods", "us-10y-treasury"],
     whyItMatters: "ISM manufacturing gives investors an early read on whether the hard-data cycle is improving enough to support cyclicals."
   },
@@ -93,16 +122,59 @@ export const releaseSnapshotInputs: ReleaseSnapshotInput[] = [
     sourceName: "ISM Services PMI",
     sourceUrl: "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/services/february/",
     consensusValue: 53.6,
+    threeMonthAverageSurprise: 0.8,
     linkedIndicators: ["retail-sales", "nonfarm-payrolls", "us-10y-treasury"],
     whyItMatters: "Services PMI matters because it sits closest to the part of the economy that keeps the soft-landing story alive."
+  },
+  {
+    indicatorSlug: "retail-sales",
+    releaseDate: "2026-03-16",
+    sourceName: "Census retail sales release",
+    sourceUrl: "https://www.census.gov/retail/index.html",
+    consensusValue: 2.9,
+    threeMonthAverageSurprise: 0.2,
+    linkedIndicators: ["ism-services", "nonfarm-payrolls", "us-10y-treasury"],
+    whyItMatters: "Retail sales show whether the consumer is still validating the softer-landing growth story after rates and inflation move."
   },
   {
     indicatorSlug: "industrial-production",
     releaseDate: "2026-03-16",
     sourceName: "Federal Reserve G.17",
     sourceUrl: "https://www.federalreserve.gov/releases/G17/default.htm",
+    consensusValue: 1.1,
+    threeMonthAverageSurprise: 0.1,
     linkedIndicators: ["ism-manufacturing", "durable-goods", "us-10y-treasury"],
     whyItMatters: "Industrial production tells investors whether survey strength is translating into actual output."
+  },
+  {
+    indicatorSlug: "durable-goods",
+    releaseDate: "2026-03-25",
+    sourceName: "Census durable goods release",
+    sourceUrl: "https://www.census.gov/manufacturing/m3/index.html",
+    consensusValue: 1.2,
+    threeMonthAverageSurprise: 0.3,
+    linkedIndicators: ["ism-manufacturing", "industrial-production", "us-10y-treasury"],
+    whyItMatters: "Durable goods orders help confirm whether business demand is broad enough to support the factory cycle."
+  },
+  {
+    indicatorSlug: "housing-starts",
+    releaseDate: "2026-03-17",
+    sourceName: "Census housing starts release",
+    sourceUrl: "https://www.census.gov/construction/nrc/index.html",
+    consensusValue: 1.35,
+    threeMonthAverageSurprise: 0.04,
+    linkedIndicators: ["building-permits", "mortgage-rates", "us-10y-treasury"],
+    whyItMatters: "Housing starts show whether lower financing pressure is actually feeding through to real-economy activity."
+  },
+  {
+    indicatorSlug: "building-permits",
+    releaseDate: "2026-03-17",
+    sourceName: "Census building permits release",
+    sourceUrl: "https://www.census.gov/construction/nrc/index.html",
+    consensusValue: 1.41,
+    threeMonthAverageSurprise: 0.03,
+    linkedIndicators: ["housing-starts", "mortgage-rates", "us-10y-treasury"],
+    whyItMatters: "Permits are the cleaner forward-looking housing signal because they lead the physical starts data."
   }
 ];
 

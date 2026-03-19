@@ -1,13 +1,101 @@
+import { subDays, subMonths, subQuarters, subWeeks } from "date-fns";
+
 import { getChartHistoryPointTarget, getRequiredObservationLimit } from "@/lib/chart-frequency";
 import { macroIndicators } from "@/lib/data";
+import { getIndicatorRelease } from "@/lib/release-metadata";
+import { fetchBeaIndicator } from "@/lib/server/providers/bea";
+import { fetchBlsIndicator } from "@/lib/server/providers/bls";
+import { fetchCensusIndicator } from "@/lib/server/providers/census";
+import { fetchDolIndicator } from "@/lib/server/providers/dol";
+import { fetchFedIndicator } from "@/lib/server/providers/fed";
 import { fetchFredObservations, type FredObservation } from "@/lib/server/providers/fred";
+import { fetchIsmIndicator } from "@/lib/server/providers/ism";
+import { fetchTreasuryIndicator } from "@/lib/server/providers/treasury";
+import { type ProviderObservation } from "@/lib/server/providers/shared";
+import { withRetry } from "@/lib/server/retry";
+import { createSupabaseAdminClient, hasSupabaseWriteEnv } from "@/lib/server/supabase";
 import { seriesConfigBySlug, type SeriesConfig } from "@/lib/server/series-config";
-import { createSupabaseAdminClient, hasSupabaseEnv } from "@/lib/server/supabase";
-import type { MacroIndicator, RefreshResult, RefreshScope } from "@/types/macro";
+import type { ChartPoint, Frequency, MacroIndicator, RefreshResult, RefreshScope } from "@/types/macro";
 
-type ChartPoint = {
-  date: string;
-  value: number;
+type ExistingLatestRow = {
+  slug: string;
+  observed_at: string | null;
+  current_value: number | null;
+  prior_value: number | null;
+  source_payload: Record<string, unknown> | null;
+  inserted_at: string | null;
+};
+
+type ExistingSyncStatusRow = {
+  slug: string;
+  last_successful_fetch: string | null;
+  last_failed_fetch: string | null;
+  consecutive_failures: number | null;
+};
+
+type FetchOutcome = {
+  observedAt: string;
+  currentValue: number;
+  priorValue: number;
+  sourceName: string;
+  sourceUrl?: string;
+  chartHistory?: ChartPoint[];
+  itemsFetched: number;
+  parseStatus: string;
+};
+
+type ObservationWriteRow = {
+  indicator_slug: string;
+  observed_at: string;
+  current_value: number;
+  prior_value: number;
+  change_value: number;
+  chart_history: ChartPoint[] | null;
+  source_payload: Record<string, unknown>;
+};
+
+type SyncStatusWriteRow = {
+  slug: string;
+  module: string;
+  provider_type: string;
+  source_name: string;
+  source_url: string | null;
+  status: string;
+  last_attempted_fetch: string | null;
+  last_successful_fetch: string | null;
+  last_failed_fetch: string | null;
+  last_duration_ms: number | null;
+  last_items_fetched: number | null;
+  last_parse_status: string | null;
+  last_error: string | null;
+  fallback_usage_reason: string | null;
+  consecutive_failures: number;
+  updated_at: string;
+};
+
+type FetchLogWriteRow = {
+  indicator_slug: string;
+  module: string;
+  provider_type: string;
+  source_name: string;
+  source_url: string | null;
+  started_at: string;
+  completed_at: string;
+  duration_ms: number;
+  success: boolean;
+  items_fetched: number | null;
+  parse_status: string | null;
+  attempt_count: number;
+  error_message: string | null;
+};
+
+type AttemptResult = {
+  slug: string;
+  refreshed: boolean;
+  skipped: boolean;
+  observationRow?: ObservationWriteRow;
+  syncStatusRow: SyncStatusWriteRow;
+  fetchLogRow?: FetchLogWriteRow;
 };
 
 function isInScope(indicator: MacroIndicator, scope: RefreshScope) {
@@ -28,11 +116,11 @@ function round(value: number) {
   return Number(value.toFixed(4));
 }
 
-function transformObservation(
-  observations: FredObservation[],
-  index: number,
-  config: SeriesConfig
-) {
+function serializeError(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown refresh error.";
+}
+
+function transformObservation(observations: FredObservation[], index: number, config: SeriesConfig) {
   const scale = config.scale ?? 1;
   const current = observations[index];
 
@@ -132,125 +220,409 @@ function buildSeries(observations: FredObservation[], config: SeriesConfig): Cha
     .filter((point): point is ChartPoint => point !== null);
 }
 
-export async function refreshIndicators(scope: RefreshScope = "all"): Promise<RefreshResult> {
-  const startedAt = new Date().toISOString();
-  const eligible = macroIndicators.filter((indicator) => {
-    const config = seriesConfigBySlug[indicator.slug];
-    return Boolean(config) && isInScope(indicator, scope);
-  });
-  const skipped = macroIndicators
-    .filter((indicator) => !eligible.some((candidate) => candidate.slug === indicator.slug) && isInScope(indicator, scope))
-    .map((indicator) => indicator.slug);
+function getPriorPointDate(observedAt: string, frequency: Frequency) {
+  const reference = new Date(`${observedAt}T12:00:00Z`);
 
-  if (!hasSupabaseEnv() || !process.env.FRED_API_KEY) {
-    return {
-      scope,
-      startedAt,
-      completedAt: new Date().toISOString(),
-      dataMode: "demo",
-      refreshed: [],
-      skipped
-    };
+  if (frequency === "Daily" || frequency === "Live") {
+    return subDays(reference, 1).toISOString().slice(0, 10);
   }
 
-  const supabase = createSupabaseAdminClient();
-  const refreshed: string[] = [];
-  const uniqueSeriesIds = [
-    ...new Set(
-      eligible.flatMap((indicator) => {
-        const config = seriesConfigBySlug[indicator.slug];
-        return config ? getConfigSeriesIds(config) : [];
-      })
-    )
-  ] as string[];
+  if (frequency === "Weekly") {
+    return subWeeks(reference, 1).toISOString().slice(0, 10);
+  }
+
+  if (frequency === "Monthly") {
+    return subMonths(reference, 1).toISOString().slice(0, 10);
+  }
+
+  return subQuarters(reference, 1).toISOString().slice(0, 10);
+}
+
+function toMinimalChartHistory(indicator: MacroIndicator, observedAt: string, currentValue: number, priorValue: number) {
+  return [
+    { date: getPriorPointDate(observedAt, indicator.frequency), value: priorValue },
+    { date: observedAt, value: currentValue }
+  ];
+}
+
+function toProviderOutcome(indicator: MacroIndicator, observation: ProviderObservation): FetchOutcome {
+  return {
+    observedAt: observation.observedAt,
+    currentValue: observation.currentValue,
+    priorValue: observation.priorValue,
+    sourceName: observation.sourceName,
+    sourceUrl: observation.sourceUrl,
+    chartHistory: toMinimalChartHistory(indicator, observation.observedAt, observation.currentValue, observation.priorValue),
+    itemsFetched: 1,
+    parseStatus: "parsed"
+  };
+}
+
+async function fetchFredOutcome(indicator: MacroIndicator): Promise<FetchOutcome> {
+  if (!process.env.FRED_API_KEY) {
+    throw new Error("Missing FRED_API_KEY.");
+  }
+
+  const config = seriesConfigBySlug[indicator.slug];
+
+  if (!config) {
+    throw new Error(`Missing series config for ${indicator.slug}.`);
+  }
+
+  const uniqueSeriesIds = [...new Set(getConfigSeriesIds(config))];
   const rawSeriesEntries = await Promise.all(
     uniqueSeriesIds.map(async (seriesId) => {
       const limit = Math.max(
-        ...eligible
-          .filter((indicator) => {
-            const indicatorConfig = seriesConfigBySlug[indicator.slug];
-            return indicatorConfig ? getConfigSeriesIds(indicatorConfig).includes(seriesId) : false;
-          })
-          .map((indicator) =>
-            Math.max(
-              seriesConfigBySlug[indicator.slug]?.limit ?? 0,
-              getRequiredObservationLimit(
-                indicator.frequency,
-                seriesConfigBySlug[indicator.slug]?.transform ?? "level"
-              )
-            )
-          )
+        config.limit ?? 0,
+        getRequiredObservationLimit(indicator.frequency, config.transform)
       );
 
       return [seriesId, await fetchFredObservations(seriesId, limit)] as const;
     })
   );
   const rawSeriesMap = Object.fromEntries(rawSeriesEntries);
+  const transformed = buildSeries(combineObservations(rawSeriesMap, config), config);
+  const current = transformed.at(-1);
+  const prior = transformed.at(-2);
 
-  for (const indicator of eligible) {
-    const config = seriesConfigBySlug[indicator.slug];
+  if (!current || !prior) {
+    throw new Error(`Not enough FRED data to resolve ${indicator.slug}.`);
+  }
 
-    if (!config) {
-      continue;
-    }
+  return {
+    observedAt: current.date,
+    currentValue: current.value,
+    priorValue: prior.value,
+    sourceName: indicator.source.name,
+    sourceUrl: indicator.source.url,
+    chartHistory: transformed.slice(-getChartHistoryPointTarget(indicator.frequency)),
+    itemsFetched: transformed.length,
+    parseStatus: "parsed"
+  };
+}
 
-    const rawObservations = combineObservations(rawSeriesMap, config);
-    const transformed = buildSeries(rawObservations, config);
+async function resolveFetchOutcome(indicator: MacroIndicator): Promise<FetchOutcome> {
+  switch (indicator.slug) {
+    case "cpi-headline":
+    case "core-cpi":
+    case "ppi-final-demand":
+    case "avg-hourly-earnings":
+    case "nonfarm-payrolls":
+    case "unemployment-rate":
+      return toProviderOutcome(indicator, await fetchBlsIndicator(indicator.slug));
+    case "core-pce":
+      return toProviderOutcome(indicator, await fetchBeaIndicator("core-pce"));
+    case "ism-manufacturing":
+    case "ism-services":
+      return toProviderOutcome(indicator, await fetchIsmIndicator(indicator.slug));
+    case "industrial-production":
+      return toProviderOutcome(indicator, await fetchFedIndicator("industrial-production"));
+    case "durable-goods":
+    case "housing-starts":
+    case "building-permits":
+      return toProviderOutcome(indicator, await fetchCensusIndicator(indicator.slug));
+    case "initial-claims":
+      return toProviderOutcome(indicator, await fetchDolIndicator());
+    case "us-2y-treasury":
+    case "us-10y-treasury":
+      return toProviderOutcome(indicator, await fetchTreasuryIndicator(indicator.slug));
+    default:
+      if (indicator.provider.type === "fred") {
+        return fetchFredOutcome(indicator);
+      }
 
-    if (transformed.length < 2) {
-      skipped.push(indicator.slug);
-      continue;
-    }
+      throw new Error(`No live provider is configured for ${indicator.slug}.`);
+  }
+}
 
-    const current = transformed.at(-1);
-    const prior = transformed.at(-2);
+function buildDefinitionRows(indicators: MacroIndicator[]) {
+  return indicators.map((indicator) => ({
+    slug: indicator.slug,
+    name: indicator.name,
+    short_name: indicator.shortName,
+    module: indicator.module,
+    dimension: indicator.dimension,
+    unit: indicator.unit,
+    frequency: indicator.frequency,
+    source_name: indicator.source.name,
+    source_url: indicator.source.url ?? null,
+    source_access: indicator.source.access,
+    tooltips: indicator.tooltips,
+    regime_tag: indicator.regimeTag,
+    summary: indicator.summary,
+    advanced_summary: indicator.advancedSummary,
+    watch_list: indicator.watchList,
+    signal_score: indicator.signalScore,
+    tone: indicator.tone,
+    overlays: indicator.overlays ?? [],
+    release_cadence: indicator.releaseCadence,
+    search_terms: indicator.searchTerms,
+    provider_type: indicator.provider.type,
+    provider_series_id: indicator.provider.seriesId ?? null
+  }));
+}
 
-    if (!current || !prior) {
-      skipped.push(indicator.slug);
-      continue;
-    }
+function logFetch(result: FetchLogWriteRow, fallbackUsageReason?: string | null) {
+  console.info(
+    JSON.stringify({
+      event: "indicator_fetch",
+      indicator_slug: result.indicator_slug,
+      module: result.module,
+      source: result.source_name,
+      provider: result.provider_type,
+      started_at: result.started_at,
+      completed_at: result.completed_at,
+      duration_ms: result.duration_ms,
+      success: result.success,
+      items_fetched: result.items_fetched,
+      parse_status: result.parse_status,
+      attempt_count: result.attempt_count,
+      error_message: result.error_message,
+      fallback_usage_reason: fallbackUsageReason ?? null
+    })
+  );
+}
 
-    await supabase.from("indicator_definitions").upsert(
-      {
+async function runAttempt(
+  indicator: MacroIndicator,
+  existingLatestMap: Map<string, ExistingLatestRow>,
+  existingSyncMap: Map<string, ExistingSyncStatusRow>
+): Promise<AttemptResult> {
+  const existingLatest = existingLatestMap.get(indicator.slug);
+  const existingSync = existingSyncMap.get(indicator.slug);
+  const existingSuccessAt =
+    existingSync?.last_successful_fetch ??
+    (typeof existingLatest?.source_payload?.updated_at === "string"
+      ? existingLatest.source_payload.updated_at
+      : existingLatest?.inserted_at) ??
+    null;
+  const consecutiveFailures = existingSync?.consecutive_failures ?? 0;
+
+  if (indicator.provider.type === "manual") {
+    return {
+      slug: indicator.slug,
+      refreshed: false,
+      skipped: true,
+      syncStatusRow: {
         slug: indicator.slug,
-        name: indicator.name,
-        short_name: indicator.shortName,
         module: indicator.module,
-        dimension: indicator.dimension,
-        unit: indicator.unit,
-        frequency: indicator.frequency,
+        provider_type: indicator.provider.type,
         source_name: indicator.source.name,
         source_url: indicator.source.url ?? null,
-        source_access: indicator.source.access,
-        tooltips: indicator.tooltips,
-        regime_tag: indicator.regimeTag,
-        summary: indicator.summary,
-        advanced_summary: indicator.advancedSummary,
-        watch_list: indicator.watchList,
-        signal_score: indicator.signalScore,
-        tone: indicator.tone,
-        overlays: indicator.overlays ?? [],
-        release_cadence: indicator.releaseCadence,
-        search_terms: indicator.searchTerms,
-        provider_type: indicator.provider.type,
-        provider_series_id: indicator.provider.seriesId ?? null
-      },
-      { onConflict: "slug" }
-    );
+        status: "fallback",
+        last_attempted_fetch: null,
+        last_successful_fetch: existingSuccessAt,
+        last_failed_fetch: existingSync?.last_failed_fetch ?? null,
+        last_duration_ms: null,
+        last_items_fetched: null,
+        last_parse_status: "manual-fallback",
+        last_error: null,
+        fallback_usage_reason: "Seed/manual fallback value.",
+        consecutive_failures: 0,
+        updated_at: new Date().toISOString()
+      }
+    };
+  }
 
-    await supabase.from("indicator_observations").upsert(
-      {
+  const release = getIndicatorRelease(indicator.slug, indicator.frequency, indicator.releaseCadence);
+  const startedAt = new Date();
+
+  try {
+    const { attemptsUsed, value } = await withRetry(() => resolveFetchOutcome(indicator));
+    const completedAt = new Date();
+    const completedIso = completedAt.toISOString();
+    const durationMs = completedAt.getTime() - startedAt.getTime();
+    const sourcePayload = {
+      provider_type: indicator.provider.type,
+      source_name: value.sourceName,
+      source_url: value.sourceUrl ?? null,
+      updated_at: completedIso,
+      observed_at: value.observedAt,
+      next_release_at: release.nextReleaseDate ? `${release.nextReleaseDate}T12:00:00Z` : null,
+      status: "live",
+      freshness_age_minutes: 0,
+      parse_status: value.parseStatus,
+      items_fetched: value.itemsFetched,
+      last_successful_fetch: completedIso,
+      last_failed_fetch: null,
+      error_message: null,
+      fallback_usage_reason: null
+    } satisfies Record<string, unknown>;
+    const fetchLogRow: FetchLogWriteRow = {
+      indicator_slug: indicator.slug,
+      module: indicator.module,
+      provider_type: indicator.provider.type,
+      source_name: value.sourceName,
+      source_url: value.sourceUrl ?? null,
+      started_at: startedAt.toISOString(),
+      completed_at: completedIso,
+      duration_ms: durationMs,
+      success: true,
+      items_fetched: value.itemsFetched,
+      parse_status: value.parseStatus,
+      attempt_count: attemptsUsed,
+      error_message: null
+    };
+
+    logFetch(fetchLogRow);
+
+    return {
+      slug: indicator.slug,
+      refreshed: true,
+      skipped: false,
+      observationRow: {
         indicator_slug: indicator.slug,
-        observed_at: current.date,
-        current_value: current.value,
-        prior_value: prior.value,
-        change_value: round(current.value - prior.value),
-        chart_history: transformed.slice(-getChartHistoryPointTarget(indicator.frequency))
+        observed_at: value.observedAt,
+        current_value: value.currentValue,
+        prior_value: value.priorValue,
+        change_value: round(value.currentValue - value.priorValue),
+        chart_history: value.chartHistory ?? null,
+        source_payload: sourcePayload
       },
-      { onConflict: "indicator_slug,observed_at" }
-    );
+      syncStatusRow: {
+        slug: indicator.slug,
+        module: indicator.module,
+        provider_type: indicator.provider.type,
+        source_name: value.sourceName,
+        source_url: value.sourceUrl ?? null,
+        status: "live",
+        last_attempted_fetch: completedIso,
+        last_successful_fetch: completedIso,
+        last_failed_fetch: null,
+        last_duration_ms: durationMs,
+        last_items_fetched: value.itemsFetched,
+        last_parse_status: value.parseStatus,
+        last_error: null,
+        fallback_usage_reason: null,
+        consecutive_failures: 0,
+        updated_at: completedIso
+      },
+      fetchLogRow
+    };
+  } catch (error) {
+    const completedAt = new Date();
+    const completedIso = completedAt.toISOString();
+    const durationMs = completedAt.getTime() - startedAt.getTime();
+    const errorMessage = serializeError(error);
+    const hasLiveCache =
+      Boolean(existingLatest?.observed_at) &&
+      existingLatest?.current_value !== null &&
+      existingLatest?.current_value !== undefined &&
+      existingLatest?.prior_value !== null &&
+      existingLatest?.prior_value !== undefined;
+    const fallbackUsageReason = hasLiveCache
+      ? "Serving last good live cache because the latest fetch failed."
+      : "No valid live cache exists, so the seeded fallback value is being shown.";
+    const status = hasLiveCache ? "stale-live" : "error";
+    const fetchLogRow: FetchLogWriteRow = {
+      indicator_slug: indicator.slug,
+      module: indicator.module,
+      provider_type: indicator.provider.type,
+      source_name: indicator.source.name,
+      source_url: indicator.source.url ?? null,
+      started_at: startedAt.toISOString(),
+      completed_at: completedIso,
+      duration_ms: durationMs,
+      success: false,
+      items_fetched: 0,
+      parse_status: "failed",
+      attempt_count: 3,
+      error_message: errorMessage
+    };
 
-    refreshed.push(indicator.slug);
+    logFetch(fetchLogRow, fallbackUsageReason);
+
+    return {
+      slug: indicator.slug,
+      refreshed: false,
+      skipped: true,
+      syncStatusRow: {
+        slug: indicator.slug,
+        module: indicator.module,
+        provider_type: indicator.provider.type,
+        source_name: indicator.source.name,
+        source_url: indicator.source.url ?? null,
+        status,
+        last_attempted_fetch: completedIso,
+        last_successful_fetch: existingSuccessAt,
+        last_failed_fetch: completedIso,
+        last_duration_ms: durationMs,
+        last_items_fetched: 0,
+        last_parse_status: "failed",
+        last_error: errorMessage,
+        fallback_usage_reason: fallbackUsageReason,
+        consecutive_failures: consecutiveFailures + 1,
+        updated_at: completedIso
+      },
+      fetchLogRow
+    };
+  }
+}
+
+export async function refreshIndicators(scope: RefreshScope = "all"): Promise<RefreshResult> {
+  const startedAt = new Date().toISOString();
+  const inScopeIndicators = macroIndicators.filter((indicator) => isInScope(indicator, scope));
+  const outOfScope = macroIndicators
+    .filter((indicator) => !isInScope(indicator, scope))
+    .map((indicator) => indicator.slug);
+
+  if (!hasSupabaseWriteEnv()) {
+    return {
+      scope,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      dataMode: "demo",
+      refreshed: [],
+      skipped: inScopeIndicators.map((indicator) => indicator.slug)
+    };
+  }
+
+  const supabase = createSupabaseAdminClient();
+
+  await supabase.from("indicator_definitions").upsert(buildDefinitionRows(macroIndicators), {
+    onConflict: "slug"
+  });
+
+  const [{ data: latestRows }, { data: syncRows }] = await Promise.all([
+    supabase
+      .from("indicator_latest")
+      .select("slug,observed_at,current_value,prior_value,source_payload,inserted_at")
+      .returns<ExistingLatestRow[]>(),
+    supabase
+      .from("indicator_sync_status")
+      .select("slug,last_successful_fetch,last_failed_fetch,consecutive_failures")
+      .returns<ExistingSyncStatusRow[]>()
+  ]);
+  const existingLatestMap = new Map((latestRows ?? []).map((row) => [row.slug, row]));
+  const existingSyncMap = new Map((syncRows ?? []).map((row) => [row.slug, row]));
+  const results = await Promise.all(
+    inScopeIndicators.map((indicator) => runAttempt(indicator, existingLatestMap, existingSyncMap))
+  );
+
+  const observationRows = results
+    .map((result) => result.observationRow)
+    .filter((row): row is ObservationWriteRow => Boolean(row));
+  const syncStatusRows = results.map((result) => result.syncStatusRow);
+  const fetchLogRows = results
+    .map((result) => result.fetchLogRow)
+    .filter((row): row is FetchLogWriteRow => Boolean(row));
+  const refreshed = results.filter((result) => result.refreshed).map((result) => result.slug);
+  const skipped = [...outOfScope, ...results.filter((result) => result.skipped).map((result) => result.slug)];
+
+  if (observationRows.length > 0) {
+    await supabase.from("indicator_observations").upsert(observationRows, {
+      onConflict: "indicator_slug,observed_at"
+    });
+  }
+
+  if (syncStatusRows.length > 0) {
+    await supabase.from("indicator_sync_status").upsert(syncStatusRows, {
+      onConflict: "slug"
+    });
+  }
+
+  if (fetchLogRows.length > 0) {
+    await supabase.from("indicator_fetch_logs").insert(fetchLogRows);
   }
 
   const uniqueSkipped = [...new Set(skipped)];
@@ -262,7 +634,10 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
     status: "completed",
     payload: {
       refreshed,
-      skipped: uniqueSkipped
+      skipped: uniqueSkipped,
+      liveIndicators: refreshed,
+      staleIndicators: syncStatusRows.filter((row) => row.status === "stale-live").map((row) => row.slug),
+      errorIndicators: syncStatusRows.filter((row) => row.status === "error").map((row) => row.slug)
     }
   });
 
@@ -270,7 +645,7 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
     scope,
     startedAt,
     completedAt: new Date().toISOString(),
-    dataMode: "live",
+    dataMode: refreshed.length > 0 ? "live" : "demo",
     refreshed,
     skipped: uniqueSkipped
   };

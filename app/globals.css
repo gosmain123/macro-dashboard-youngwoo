@@ -16,6 +16,14 @@ html {
   scroll-behavior: smooth;
 }
 
+html[data-user-mode="pro"] .mode-beginner-only {
+  display: none !important;
+}
+
+html[data-user-mode="beginner"] .mode-pro-only {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-height: 100vh;

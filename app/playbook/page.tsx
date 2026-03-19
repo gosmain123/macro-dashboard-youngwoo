@@ -1,12 +1,14 @@
 import { PlaybookBoard } from "@/components/playbook-board";
-import { getPlaybookPayload } from "@/lib/dashboard";
+import { getDashboardPayload } from "@/lib/dashboard";
+
+export const revalidate = 60;
 
 export const metadata = {
-  title: "Regime Playbook | Macro Signal Deck",
-  description: "How disinflation, re-acceleration, growth scares, stagflation, and liquidity squeezes usually trade."
+  title: "Playbook | Macro Signal Deck",
+  description: "A guided macro reading order, logic-chain map, regime builder, and view builder."
 };
 
 export default async function PlaybookPage() {
-  const playbooks = await getPlaybookPayload();
-  return <PlaybookBoard playbooks={playbooks} />;
+  const payload = await getDashboardPayload();
+  return <PlaybookBoard payload={payload} />;
 }

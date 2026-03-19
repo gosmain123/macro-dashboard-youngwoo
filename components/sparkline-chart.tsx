@@ -53,7 +53,7 @@ export function SparklineChart({
   const showDots = shouldShowChartDots(frequency, visibleData.length);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-chart-root="true">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">History</p>
         <div className="flex flex-wrap gap-2">

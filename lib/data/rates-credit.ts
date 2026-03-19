@@ -13,8 +13,8 @@ const blueprints: IndicatorBlueprint[] = [
     unitLabel: "Yield %",
     frequency: "Daily",
     source: {
-      name: "Treasury via FRED",
-      url: "https://fred.stlouisfed.org/series/DGS2",
+      name: "U.S. Treasury Daily Yield Curve",
+      url: "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView",
       access: "official-free"
     },
     tooltips: ratesTooltip(
@@ -30,7 +30,7 @@ const blueprints: IndicatorBlueprint[] = [
     signalScore: 0.2,
     tone: "positive",
     releaseCadence: "Daily",
-    provider: { type: "fred", seriesId: "DGS2" },
+    provider: { type: "treasury" },
     trendSlope: -0.01,
     volatility: 0.02,
     minValue: 0.1,
@@ -48,8 +48,8 @@ const blueprints: IndicatorBlueprint[] = [
     unitLabel: "Yield %",
     frequency: "Daily",
     source: {
-      name: "Treasury via FRED",
-      url: "https://fred.stlouisfed.org/series/DGS10",
+      name: "U.S. Treasury Daily Yield Curve",
+      url: "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView",
       access: "official-free"
     },
     tooltips: ratesTooltip(
@@ -65,7 +65,7 @@ const blueprints: IndicatorBlueprint[] = [
     signalScore: 0.1,
     tone: "neutral",
     releaseCadence: "Daily",
-    provider: { type: "fred", seriesId: "DGS10" },
+    provider: { type: "treasury" },
     trendSlope: -0.01,
     volatility: 0.02,
     minValue: 0.2,

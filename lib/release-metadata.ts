@@ -413,11 +413,24 @@ export function getIndicatorRelease(slug: string, frequency: Frequency, releaseC
       "hy-spreads",
       "ten-year-real-yield",
       "dxy",
+      "eurusd",
+      "usdjpy",
+      "usdcnh",
       "wti-oil",
+      "natural-gas",
+      "copper",
       "gold",
       "copper-gold-ratio",
+      "sofr-implied-cuts",
+      "terminal-rate-pricing",
+      "next-three-fomc-path",
       "vix",
-      "move-index"
+      "move-index",
+      "breadth",
+      "cyclical-vs-defensive",
+      "equal-weight-vs-cap-weight",
+      "small-caps-vs-large-caps",
+      "etf-flows"
     ].includes(slug)
   ) {
     return marketRelease("Updates daily");

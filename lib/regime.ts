@@ -131,6 +131,34 @@ function averageSignalScore(indicators: MacroIndicator[]) {
   return Number((indicators.reduce((sum, indicator) => sum + indicator.signalScore, 0) / indicators.length).toFixed(1));
 }
 
+function getIndicator(indicators: MacroIndicator[], slug: string) {
+  return indicators.find((indicator) => indicator.slug === slug);
+}
+
+function pickSnapshotTitle(regimeCards: RegimeCard[]) {
+  const growth = regimeCards.find((card) => card.id === "growth");
+  const inflation = regimeCards.find((card) => card.id === "inflation");
+  const labor = regimeCards.find((card) => card.id === "labor");
+
+  if (growth?.label === "soft landing" && (inflation?.label === "disinflation" || inflation?.label === "cooling but sticky")) {
+    return "Soft landing with broader confirmation";
+  }
+
+  if (inflation?.label === "overheating" && growth && growth.score >= 0.3) {
+    return "Reflation pressure is building";
+  }
+
+  if (growth?.label === "growth scare" && labor?.label === "slackening") {
+    return "Hard-landing risk is becoming harder to ignore";
+  }
+
+  if (inflation?.label === "overheating" && labor?.label !== "rebalancing") {
+    return "Stagflation-lite tension is back in view";
+  }
+
+  return "Mixed macro, cross-check the hidden layers";
+}
+
 export function deriveRegimeCards(indicators: MacroIndicator[]): RegimeCard[] {
   const groups = {
     growth: indicators.filter((indicator) => indicator.dimension === "growth"),
@@ -196,8 +224,23 @@ export function deriveRegimeCards(indicators: MacroIndicator[]): RegimeCard[] {
   ];
 }
 
+export function deriveRegimeSnapshot(indicators: MacroIndicator[], regimeCards = deriveRegimeCards(indicators)): RegimeSnapshot {
+  const growth = regimeCards.find((card) => card.id === "growth");
+  const inflation = regimeCards.find((card) => card.id === "inflation");
+  const labor = regimeCards.find((card) => card.id === "labor");
+  const liquidity = getIndicator(indicators, "net-liquidity") ?? getIndicator(indicators, "financial-conditions-index");
+  const policy = getIndicator(indicators, "us-2y-treasury") ?? getIndicator(indicators, "sofr-implied-cuts");
+  const spillover = getIndicator(indicators, "dxy") ?? getIndicator(indicators, "global-growth-cross-check");
+  const positioning = getIndicator(indicators, "breadth") ?? getIndicator(indicators, "hy-spreads");
+
+  return {
+    title: pickSnapshotTitle(regimeCards),
+    summary: `${growth?.status ?? "Growth is mixed."} ${inflation?.status ?? "Inflation is mixed."} ${labor?.status ?? "Labor is mixed."} Liquidity is reading ${liquidity?.regimeTag ?? "mixed"}, policy pricing is ${policy?.regimeTag ?? "still moving"}, global spillover is ${spillover?.regimeTag ?? "worth checking"}, and positioning is ${positioning?.regimeTag ?? "mixed"}.`
+  };
+}
+
 export const defaultRegimeSnapshot: RegimeSnapshot = {
-  title: "Soft landing with disinflation bias",
+  title: "Mixed macro, cross-check the hidden layers",
   summary:
-    "Growth is stable, inflation is easing, labor is cooling without cracking, and liquidity is mixed rather than outright hostile."
+    "Growth, inflation, and labor should be cross-checked with liquidity, policy pricing, global spillover, and positioning before calling a regime turn."
 };
