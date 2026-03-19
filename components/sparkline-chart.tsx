@@ -31,17 +31,20 @@ export function SparklineChart({
   data,
   frequency,
   unit,
-  showOverlay = false
+  showOverlay = false,
+  variant = "detail"
 }: {
   data: ChartPoint[];
   frequency: Frequency;
   unit: string;
   showOverlay?: boolean;
+  variant?: "compact" | "detail";
 }) {
   const defaultRange = getDefaultChartRange(frequency);
   const rangeOptions = getChartRangeOptions(frequency);
   const [selectedRange, setSelectedRange] = useState<ChartRangeId>(defaultRange);
   const gradientId = useId().replace(/:/g, "");
+  const compact = variant === "compact";
 
   useEffect(() => {
     setSelectedRange(defaultRange);
@@ -54,79 +57,84 @@ export function SparklineChart({
 
   return (
     <div className="space-y-3" data-chart-root="true">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">History</p>
-        <div className="flex flex-wrap gap-2">
-          {rangeOptions.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              aria-pressed={selectedRange === option.id}
-              onClick={() => setSelectedRange(option.id)}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] transition",
-                selectedRange === option.id
-                  ? "border-cyan-300/60 bg-cyan-300/15 text-white"
-                  : "border-white/10 bg-white/5 text-slate-400 hover:border-white/20 hover:text-slate-200"
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
+      {compact ? null : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">History</p>
+          <div className="flex flex-wrap gap-2">
+            {rangeOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={selectedRange === option.id}
+                onClick={() => setSelectedRange(option.id)}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] transition",
+                  selectedRange === option.id
+                    ? "border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-[color:var(--text-primary)]"
+                    : "border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] text-[color:var(--text-muted)] hover:border-[color:var(--border-strong)] hover:text-[color:var(--text-primary)]"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="h-48 w-full">
+      <div className={cn("w-full", compact ? "h-24" : "h-48")}>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={visibleData} margin={{ top: 8, right: 6, left: -20, bottom: 0 }}>
+          <AreaChart data={visibleData} margin={compact ? { top: 6, right: 2, left: 2, bottom: 0 } : { top: 8, right: 6, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#6ee7f9" stopOpacity={0.38 * fillOpacity} />
-                <stop offset="95%" stopColor="#6ee7f9" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--chart-accent)" stopOpacity={0.38 * fillOpacity} />
+                <stop offset="95%" stopColor="var(--chart-accent)" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tick={{ fill: "rgba(226,232,240,0.55)", fontSize: 11 }}
-              tickFormatter={(value: string) => formatChartAxisDate(value, frequency, selectedRange)}
-              minTickGap={getChartTickMinGap(frequency, selectedRange)}
-              tickMargin={10}
-            />
+            <CartesianGrid stroke="var(--chart-grid)" vertical={false} horizontal={!compact} />
+            {compact ? null : (
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
+                tickFormatter={(value: string) => formatChartAxisDate(value, frequency, selectedRange)}
+                minTickGap={getChartTickMinGap(frequency, selectedRange)}
+                tickMargin={10}
+              />
+            )}
             <YAxis hide domain={["auto", "auto"]} />
             <Tooltip
+              cursor={compact ? false : undefined}
               formatter={(value: number, name: string) => [
                 formatIndicatorValue(Number(value), unit),
                 name === "overlay" ? "Overlay" : "Value"
               ]}
               labelFormatter={(value: string) => formatChartTooltipDate(value, frequency)}
               contentStyle={{
-                background: "rgba(2, 6, 23, 0.92)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "var(--surface-strong)",
+                border: "1px solid var(--border-soft)",
                 borderRadius: "16px",
-                color: "#f8fafc"
+                color: "var(--text-primary)"
               }}
-              itemStyle={{ color: "#e2e8f0" }}
-              labelStyle={{ color: "#94a3b8" }}
+              itemStyle={{ color: "var(--text-secondary)" }}
+              labelStyle={{ color: "var(--text-muted)" }}
             />
             <Area
               type={lineType}
               dataKey="value"
-              stroke="#6ee7f9"
+              stroke="var(--chart-accent)"
               strokeWidth={2.2}
               fill={`url(#${gradientId})`}
               fillOpacity={fillOpacity}
-              dot={showDots ? { r: 2, fill: "#6ee7f9", strokeWidth: 0 } : false}
-              activeDot={{ r: 3, fill: "#6ee7f9", strokeWidth: 0 }}
+              dot={showDots ? { r: 2, fill: "var(--chart-accent)", strokeWidth: 0 } : false}
+              activeDot={{ r: 3, fill: "var(--chart-accent)", strokeWidth: 0 }}
               isAnimationActive={false}
             />
             {showOverlay ? (
               <Line
                 type={lineType}
                 dataKey="overlay"
-                stroke="#ffd36e"
+                stroke="var(--chart-overlay)"
                 strokeWidth={1.4}
                 dot={false}
                 isAnimationActive={false}

@@ -1,25 +1,63 @@
 "use client";
 
-import { Info, MoveUpRight, X } from "lucide-react";
+import { CalendarClock, ExternalLink, Info, MoveUpRight, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { FollowUpLogicCard } from "@/components/follow-up-logic-card";
 import { IndicatorActionLinks } from "@/components/indicator-action-links";
-import { cn } from "@/lib/utils";
+import { IndicatorWorkspaceActions } from "@/components/indicator-workspace-actions";
+import { MetaChip } from "@/components/meta-chip";
+import { SparklineChart } from "@/components/sparkline-chart";
+import { getHistoricalContext, getIndicatorSourceType } from "@/lib/indicator-insight";
+import { getFollowUpLogic } from "@/lib/playbook-guide";
+import { cn, formatFreshnessAge, formatIndicatorValue, formatReleaseLabel, formatTimestamp, titleCase } from "@/lib/utils";
 import type { MacroIndicator } from "@/types/macro";
 
 const closeDelayMs = 180;
 
 const detailSections = [
   { key: "definition", label: "Definition" },
-  { key: "whyItMatters", label: "Why this matters today" },
+  { key: "whyItMatters", label: "Why this matters" },
   { key: "howToUse", label: "How to read it" },
   { key: "whatToWatch", label: "What to watch next" }
 ] as const;
 
+function statusTone(status: MacroIndicator["status"]) {
+  if (status === "live") {
+    return "emerald" as const;
+  }
+
+  if (status === "fallback" || status === "stale-live") {
+    return "amber" as const;
+  }
+
+  return "rose" as const;
+}
+
+function contextTone(context: ReturnType<typeof getHistoricalContext>) {
+  if (context.band === "extreme") {
+    return "rose" as const;
+  }
+
+  if (context.band === "elevated") {
+    return "amber" as const;
+  }
+
+  if (context.band === "low") {
+    return "cyan" as const;
+  }
+
+  return "slate" as const;
+}
+
 export function IndicatorTooltip({
-  indicator
+  indicator,
+  visibleSlugs = [indicator.slug],
+  trigger = "icon"
 }: {
-  indicator: Pick<MacroIndicator, "slug" | "module" | "name" | "tooltips">;
+  indicator: MacroIndicator;
+  visibleSlugs?: string[];
+  trigger?: "icon" | "button";
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -29,6 +67,15 @@ export function IndicatorTooltip({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previewId = useId();
   const drawerTitleId = useId();
+  const followUpLogic = getFollowUpLogic(indicator.slug);
+  const sourceType = getIndicatorSourceType(indicator);
+  const context = getHistoricalContext(indicator);
+  const nextLabel =
+    indicator.nextReleaseAt
+      ? formatTimestamp(indicator.nextReleaseAt)
+      : indicator.release.type === "scheduled"
+        ? formatReleaseLabel(indicator.release.nextReleaseDate, indicator.release.timeLabel)
+        : indicator.release.detail;
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -131,6 +178,11 @@ export function IndicatorTooltip({
     triggerRef.current?.focus();
   }
 
+  const triggerClassName =
+    trigger === "button"
+      ? "soft-button inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.16em] transition"
+      : "rounded-full border border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] p-2 text-[color:var(--text-muted)] shadow-sm transition hover:border-[color:var(--accent-border)] hover:text-[color:var(--text-primary)] focus-visible:border-[color:var(--accent-border)] focus-visible:text-[color:var(--text-primary)] focus-visible:outline-none";
+
   return (
     <>
       <div className="relative" onMouseEnter={openPreview} onMouseLeave={schedulePreviewClose}>
@@ -143,33 +195,30 @@ export function IndicatorTooltip({
           onClick={openDrawer}
           onFocus={openPreview}
           onBlur={schedulePreviewClose}
-          className="rounded-full border border-white/10 bg-slate-900 p-2 text-slate-300 shadow-[0_10px_25px_rgba(2,6,23,0.35)] transition hover:border-cyan-300/60 hover:text-white focus-visible:border-cyan-300/60 focus-visible:text-white focus-visible:outline-none"
+          className={triggerClassName}
         >
           <Info className="h-4 w-4" />
+          {trigger === "button" ? "Expand details" : null}
         </button>
 
         <div
           id={previewId}
           role="tooltip"
           className={cn(
-            "absolute right-0 top-12 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-[24px] border border-slate-700 bg-[#081221] p-4 shadow-[0_24px_60px_rgba(2,6,23,0.55)] transition",
+            "surface-strong absolute right-0 top-12 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-[24px] p-4 transition",
             previewOpen ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
           )}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">Definition</p>
-              <h4 className="mt-2 text-base font-semibold text-white">{indicator.name}</h4>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Definition</p>
+              <h4 className="mt-2 text-base font-semibold text-[color:var(--text-primary)]">{indicator.name}</h4>
             </div>
-            <MoveUpRight className="mt-1 h-4 w-4 shrink-0 text-cyan-200" />
+            <MoveUpRight className="mt-1 h-4 w-4 shrink-0 text-[color:var(--accent-strong)]" />
           </div>
-          <p className="mt-3 text-sm leading-6 text-slate-100">{indicator.tooltips.definition}</p>
-          <button
-            type="button"
-            onClick={openDrawer}
-            className="mt-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-medium uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/40"
-          >
-            Open full context
+          <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">{indicator.tooltips.definition}</p>
+          <button type="button" onClick={openDrawer} className="soft-button-accent mt-4 inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.16em] transition">
+            Open full view
             <MoveUpRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -187,7 +236,7 @@ export function IndicatorTooltip({
           aria-label={`Close ${indicator.name} details`}
           onClick={closeDrawer}
           className={cn(
-            "absolute inset-0 bg-slate-950/85 backdrop-blur-md transition",
+            "absolute inset-0 bg-[color:var(--overlay)] backdrop-blur-md transition",
             drawerOpen ? "opacity-100" : "opacity-0"
           )}
         />
@@ -198,19 +247,23 @@ export function IndicatorTooltip({
             aria-modal="true"
             aria-labelledby={drawerTitleId}
             className={cn(
-              "relative z-10 flex max-h-[min(88vh,56rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[32px] border border-slate-700 bg-[#081221] shadow-[0_36px_100px_rgba(2,6,23,0.72)] transition duration-200",
+              "surface-strong relative z-10 flex max-h-[min(90vh,60rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] transition duration-200",
               drawerOpen ? "translate-y-0 scale-100" : "translate-y-6 scale-[0.98]"
             )}
           >
-            <div className="border-b border-slate-800 bg-slate-950 px-6 py-5 sm:px-7">
+            <div className="border-b border-[color:var(--border-soft)] px-6 py-5 sm:px-7">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-cyan-200">Indicator context</p>
-                  <h3 id={drawerTitleId} className="mt-2 max-w-2xl text-2xl font-semibold text-white sm:text-3xl">
+                  <div className="flex flex-wrap gap-2">
+                    <MetaChip label="Status" value={indicator.status} tone={statusTone(indicator.status)} />
+                    <MetaChip label="Source" value={titleCase(sourceType)} tone="slate" />
+                    <MetaChip label="Context" value={context.contextLabel} tone={contextTone(context)} />
+                  </div>
+                  <h3 id={drawerTitleId} className="mt-3 max-w-2xl text-2xl font-semibold text-[color:var(--text-primary)] sm:text-3xl">
                     {indicator.name}
                   </h3>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                    Definition, reading cues, and guided next steps in one place.
+                  <p className="mt-3 max-w-3xl text-sm leading-6 text-[color:var(--text-secondary)]">
+                    {indicator.summary}
                   </p>
                 </div>
                 <button
@@ -218,31 +271,126 @@ export function IndicatorTooltip({
                   type="button"
                   aria-label={`Close ${indicator.name} details`}
                   onClick={closeDrawer}
-                  className="rounded-full border border-slate-700 bg-slate-900 p-2 text-slate-300 transition hover:border-slate-500 hover:text-white focus-visible:outline-none"
+                  className="rounded-full border border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] p-2 text-[color:var(--text-muted)] transition hover:border-[color:var(--border-strong)] hover:text-[color:var(--text-primary)] focus-visible:outline-none"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
 
-            <div className="max-h-[calc(88vh-6rem)] overflow-y-auto px-6 py-6 sm:px-7">
-              <div className="space-y-4">
-                {detailSections.map((section) => (
-                  <section key={section.key} className="rounded-[24px] border border-slate-800 bg-slate-900 p-5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                      {section.label}
+            <div className="max-h-[calc(90vh-6rem)] overflow-y-auto px-6 py-6 sm:px-7">
+              <div className="space-y-5">
+                <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+                  <div className="surface-card rounded-[24px] p-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">Current value</p>
+                    <p className="mt-3 text-4xl font-semibold text-[color:var(--text-primary)]">
+                      {formatIndicatorValue(indicator.currentValue, indicator.unit)}
                     </p>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-100">{indicator.tooltips[section.key]}</p>
-                  </section>
-                ))}
+                    <div className="mt-4 space-y-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">Updated</p>
+                        <p className="mt-1 text-sm text-[color:var(--text-primary)]">{formatTimestamp(indicator.updatedAt)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">Next release</p>
+                        <p className="mt-1 text-sm text-[color:var(--text-primary)]">{nextLabel}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <MetaChip label="Age" value={formatFreshnessAge(indicator.freshnessAgeMinutes)} tone={statusTone(indicator.status)} />
+                        <MetaChip
+                          label={context.percentileLabel}
+                          value={context.percentile !== null ? `${context.percentile}` : "\u2014"}
+                          tone={contextTone(context)}
+                        />
+                        <MetaChip
+                          label={context.zScoreLabel}
+                          value={context.zScore !== null ? `${context.zScore > 0 ? "+" : ""}${context.zScore}` : "\u2014"}
+                          tone={contextTone(context)}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                <section className="rounded-[24px] border border-slate-800 bg-slate-900 p-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">Keep going</p>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">
-                    Use these jumps to keep the interpretation flow connected instead of bouncing back to the main grid and guessing where to go next.
-                  </p>
+                  <div className="surface-card rounded-[24px] p-5">
+                    <SparklineChart
+                      data={indicator.chartHistory}
+                      frequency={indicator.frequency}
+                      unit={indicator.unit}
+                      showOverlay={Boolean(indicator.overlays?.length)}
+                    />
+                  </div>
+                </section>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {detailSections.map((section) => (
+                    <section key={section.key} className="surface-card rounded-[24px] p-5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">
+                        {section.label}
+                      </p>
+                      <p className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">{indicator.tooltips[section.key]}</p>
+                    </section>
+                  ))}
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-3">
+                  <section className="surface-card rounded-[24px] p-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Source</p>
+                    {indicator.source.url ? (
+                      <a
+                        href={indicator.source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)] transition hover:opacity-80"
+                      >
+                        {indicator.source.name}
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    ) : (
+                      <p className="mt-3 text-sm font-medium text-[color:var(--text-primary)]">{indicator.source.name}</p>
+                    )}
+                    <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+                      {indicator.release.sourceName ?? indicator.release.detail}
+                    </p>
+                  </section>
+
+                  <section className="surface-card rounded-[24px] p-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Release timing</p>
+                    <div className="mt-3 flex items-center gap-2 text-[color:var(--text-muted)]">
+                      <CalendarClock className="h-4 w-4" />
+                      {indicator.release.label}
+                    </div>
+                    <p className="mt-2 text-sm text-[color:var(--text-primary)]">{nextLabel}</p>
+                    <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{indicator.releaseCadence}</p>
+                  </section>
+
+                  <section className="surface-card rounded-[24px] p-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Trust and fetch</p>
+                    <p className="mt-3 text-sm text-[color:var(--text-primary)]">
+                      {indicator.lastFailedFetch
+                        ? `Last failed fetch ${formatTimestamp(indicator.lastFailedFetch)}`
+                        : indicator.lastSuccessfulFetch
+                          ? `Last successful fetch ${formatTimestamp(indicator.lastSuccessfulFetch)}`
+                          : "No live fetch recorded yet"}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+                      {indicator.errorMessage ?? indicator.fallbackUsageReason ?? "This card is using the latest available value and status badge."}
+                    </p>
+                  </section>
+                </div>
+
+                {followUpLogic ? <FollowUpLogicCard logic={followUpLogic} /> : null}
+
+                <section className="surface-card rounded-[24px] p-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Check next</p>
                   <div className="mt-4">
                     <IndicatorActionLinks indicator={indicator} layout="panel" />
+                  </div>
+                </section>
+
+                <section className="surface-card rounded-[24px] p-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Workspace actions</p>
+                  <div className="mt-4">
+                    <IndicatorWorkspaceActions slug={indicator.slug} name={indicator.name} visibleSlugs={visibleSlugs} />
                   </div>
                 </section>
               </div>

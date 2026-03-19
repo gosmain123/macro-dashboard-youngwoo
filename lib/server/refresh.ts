@@ -13,9 +13,14 @@ import { fetchIsmIndicator } from "@/lib/server/providers/ism";
 import { fetchTreasuryIndicator } from "@/lib/server/providers/treasury";
 import { type ProviderObservation } from "@/lib/server/providers/shared";
 import { withRetry } from "@/lib/server/retry";
+import {
+  getIndicatorSourceContract,
+  type IndicatorSourceContract,
+  type IndicatorSourceEndpointContract
+} from "@/lib/server/source-contract";
 import { createSupabaseAdminClient, hasSupabaseWriteEnv } from "@/lib/server/supabase";
 import { seriesConfigBySlug, type SeriesConfig } from "@/lib/server/series-config";
-import type { ChartPoint, Frequency, MacroIndicator, RefreshResult, RefreshScope } from "@/types/macro";
+import type { ChartPoint, Frequency, MacroIndicator, ProviderType, RefreshResult, RefreshScope } from "@/types/macro";
 
 type ExistingLatestRow = {
   slug: string;
@@ -42,6 +47,13 @@ type FetchOutcome = {
   chartHistory?: ChartPoint[];
   itemsFetched: number;
   parseStatus: string;
+};
+
+type ResolvedFetchOutcome = {
+  outcome: FetchOutcome;
+  providerType: ProviderType;
+  sourceContract: IndicatorSourceContract;
+  sourceEndpoint: IndicatorSourceEndpointContract;
 };
 
 type ObservationWriteRow = {
@@ -245,20 +257,35 @@ function toMinimalChartHistory(indicator: MacroIndicator, observedAt: string, cu
   ];
 }
 
-function toProviderOutcome(indicator: MacroIndicator, observation: ProviderObservation): FetchOutcome {
+function toProviderOutcome(
+  indicator: MacroIndicator,
+  observation: ProviderObservation,
+  overrides?: {
+    sourceName?: string;
+    sourceUrl?: string;
+    parseStatus?: string;
+  }
+): FetchOutcome {
   return {
     observedAt: observation.observedAt,
     currentValue: observation.currentValue,
     priorValue: observation.priorValue,
-    sourceName: observation.sourceName,
-    sourceUrl: observation.sourceUrl,
+    sourceName: overrides?.sourceName ?? observation.sourceName,
+    sourceUrl: overrides?.sourceUrl ?? observation.sourceUrl,
     chartHistory: toMinimalChartHistory(indicator, observation.observedAt, observation.currentValue, observation.priorValue),
     itemsFetched: 1,
-    parseStatus: "parsed"
+    parseStatus: overrides?.parseStatus ?? "parsed"
   };
 }
 
-async function fetchFredOutcome(indicator: MacroIndicator): Promise<FetchOutcome> {
+async function fetchFredOutcome(
+  indicator: MacroIndicator,
+  overrides?: {
+    sourceName?: string;
+    sourceUrl?: string;
+    parseStatus?: string;
+  }
+): Promise<FetchOutcome> {
   if (!process.env.FRED_API_KEY) {
     throw new Error("Missing FRED_API_KEY.");
   }
@@ -293,73 +320,149 @@ async function fetchFredOutcome(indicator: MacroIndicator): Promise<FetchOutcome
     observedAt: current.date,
     currentValue: current.value,
     priorValue: prior.value,
-    sourceName: indicator.source.name,
-    sourceUrl: indicator.source.url,
+    sourceName: overrides?.sourceName ?? indicator.source.name,
+    sourceUrl: overrides?.sourceUrl ?? indicator.source.url,
     chartHistory: transformed.slice(-getChartHistoryPointTarget(indicator.frequency)),
     itemsFetched: transformed.length,
-    parseStatus: "parsed"
+    parseStatus: overrides?.parseStatus ?? "parsed"
   };
 }
 
-async function resolveFetchOutcome(indicator: MacroIndicator): Promise<FetchOutcome> {
-  switch (indicator.slug) {
-    case "cpi-headline":
-    case "core-cpi":
-    case "ppi-final-demand":
-    case "avg-hourly-earnings":
-    case "nonfarm-payrolls":
-    case "unemployment-rate":
-      return toProviderOutcome(indicator, await fetchBlsIndicator(indicator.slug));
-    case "core-pce":
-      return toProviderOutcome(indicator, await fetchBeaIndicator("core-pce"));
-    case "ism-manufacturing":
-    case "ism-services":
-      return toProviderOutcome(indicator, await fetchIsmIndicator(indicator.slug));
-    case "industrial-production":
-      return toProviderOutcome(indicator, await fetchFedIndicator("industrial-production"));
-    case "durable-goods":
-    case "housing-starts":
-    case "building-permits":
-      return toProviderOutcome(indicator, await fetchCensusIndicator(indicator.slug));
-    case "initial-claims":
-      return toProviderOutcome(indicator, await fetchDolIndicator());
-    case "us-2y-treasury":
-    case "us-10y-treasury":
-      return toProviderOutcome(indicator, await fetchTreasuryIndicator(indicator.slug));
+async function fetchFromEndpoint(indicator: MacroIndicator, endpoint: IndicatorSourceEndpointContract): Promise<FetchOutcome> {
+  switch (endpoint.resolver) {
+    case "bls":
+      return toProviderOutcome(
+        indicator,
+        await fetchBlsIndicator(endpoint.resolverSlug as Parameters<typeof fetchBlsIndicator>[0]),
+        {
+          sourceName: endpoint.sourceName,
+          sourceUrl: endpoint.sourceUrl
+        }
+      );
+    case "bea":
+      return toProviderOutcome(
+        indicator,
+        await fetchBeaIndicator((endpoint.resolverSlug ?? indicator.slug) as Parameters<typeof fetchBeaIndicator>[0]),
+        {
+          sourceName: endpoint.sourceName,
+          sourceUrl: endpoint.sourceUrl
+        }
+      );
+    case "census":
+      return toProviderOutcome(
+        indicator,
+        await fetchCensusIndicator((endpoint.resolverSlug ?? indicator.slug) as Parameters<typeof fetchCensusIndicator>[0]),
+        {
+          sourceName: endpoint.sourceName,
+          sourceUrl: endpoint.sourceUrl
+        }
+      );
+    case "dol":
+      return toProviderOutcome(indicator, await fetchDolIndicator(), {
+        sourceName: endpoint.sourceName,
+        sourceUrl: endpoint.sourceUrl
+      });
+    case "fed":
+      return toProviderOutcome(
+        indicator,
+        await fetchFedIndicator((endpoint.resolverSlug ?? indicator.slug) as Parameters<typeof fetchFedIndicator>[0]),
+        {
+          sourceName: endpoint.sourceName,
+          sourceUrl: endpoint.sourceUrl
+        }
+      );
+    case "fred":
+      return fetchFredOutcome(indicator, {
+        sourceName: endpoint.sourceName,
+        sourceUrl: endpoint.sourceUrl,
+        parseStatus: endpoint.provider === "fred-backup" ? "parsed-via-fred-backup" : "parsed"
+      });
+    case "ism":
+      return toProviderOutcome(
+        indicator,
+        await fetchIsmIndicator((endpoint.resolverSlug ?? indicator.slug) as Parameters<typeof fetchIsmIndicator>[0]),
+        {
+          sourceName: endpoint.sourceName,
+          sourceUrl: endpoint.sourceUrl
+        }
+      );
+    case "treasury":
+      return toProviderOutcome(
+        indicator,
+        await fetchTreasuryIndicator((endpoint.resolverSlug ?? indicator.slug) as Parameters<typeof fetchTreasuryIndicator>[0]),
+        {
+          sourceName: endpoint.sourceName,
+          sourceUrl: endpoint.sourceUrl
+        }
+      );
+    case "manual":
+      throw new Error(`Indicator ${indicator.slug} is configured as manual-only.`);
     default:
-      if (indicator.provider.type === "fred") {
-        return fetchFredOutcome(indicator);
-      }
+      throw new Error(`No live fetch resolver is configured for ${indicator.slug}.`);
+  }
+}
 
-      throw new Error(`No live provider is configured for ${indicator.slug}.`);
+async function resolveFetchOutcome(indicator: MacroIndicator): Promise<ResolvedFetchOutcome> {
+  const sourceContract = getIndicatorSourceContract(indicator);
+
+  if (!sourceContract) {
+    throw new Error(`No source contract is configured for ${indicator.slug}.`);
+  }
+
+  if (sourceContract.liveSupport !== "configured") {
+    throw new Error(`Live source contract is ${sourceContract.liveSupport} for ${indicator.slug}.`);
+  }
+
+  try {
+    return {
+      outcome: await fetchFromEndpoint(indicator, sourceContract.primary),
+      providerType: sourceContract.primary.provider,
+      sourceContract,
+      sourceEndpoint: sourceContract.primary
+    };
+  } catch (primaryError) {
+    if (!sourceContract.backup) {
+      throw primaryError;
+    }
+
+    return {
+      outcome: await fetchFromEndpoint(indicator, sourceContract.backup),
+      providerType: sourceContract.backup.provider,
+      sourceContract,
+      sourceEndpoint: sourceContract.backup
+    };
   }
 }
 
 function buildDefinitionRows(indicators: MacroIndicator[]) {
-  return indicators.map((indicator) => ({
-    slug: indicator.slug,
-    name: indicator.name,
-    short_name: indicator.shortName,
-    module: indicator.module,
-    dimension: indicator.dimension,
-    unit: indicator.unit,
-    frequency: indicator.frequency,
-    source_name: indicator.source.name,
-    source_url: indicator.source.url ?? null,
-    source_access: indicator.source.access,
-    tooltips: indicator.tooltips,
-    regime_tag: indicator.regimeTag,
-    summary: indicator.summary,
-    advanced_summary: indicator.advancedSummary,
-    watch_list: indicator.watchList,
-    signal_score: indicator.signalScore,
-    tone: indicator.tone,
-    overlays: indicator.overlays ?? [],
-    release_cadence: indicator.releaseCadence,
-    search_terms: indicator.searchTerms,
-    provider_type: indicator.provider.type,
-    provider_series_id: indicator.provider.seriesId ?? null
-  }));
+  return indicators.map((indicator) => {
+    const sourceContract = getIndicatorSourceContract(indicator);
+
+    return {
+      slug: indicator.slug,
+      name: indicator.name,
+      short_name: indicator.shortName,
+      module: indicator.module,
+      dimension: indicator.dimension,
+      unit: indicator.unit,
+      frequency: indicator.frequency,
+      source_name: sourceContract?.primary.sourceName ?? indicator.source.name,
+      source_url: sourceContract?.primary.sourceUrl ?? indicator.source.url ?? null,
+      source_access: indicator.source.access,
+      tooltips: indicator.tooltips,
+      regime_tag: indicator.regimeTag,
+      summary: indicator.summary,
+      advanced_summary: indicator.advancedSummary,
+      watch_list: indicator.watchList,
+      signal_score: indicator.signalScore,
+      tone: indicator.tone,
+      overlays: indicator.overlays ?? [],
+      release_cadence: indicator.releaseCadence,
+      search_terms: indicator.searchTerms,
+      provider_type: sourceContract?.primary.provider ?? indicator.provider.type,
+      provider_series_id: indicator.provider.seriesId ?? null
+    };
+  });
 }
 
 function logFetch(result: FetchLogWriteRow, fallbackUsageReason?: string | null) {
@@ -388,6 +491,12 @@ async function runAttempt(
   existingLatestMap: Map<string, ExistingLatestRow>,
   existingSyncMap: Map<string, ExistingSyncStatusRow>
 ): Promise<AttemptResult> {
+  const sourceContract = getIndicatorSourceContract(indicator);
+
+  if (!sourceContract) {
+    throw new Error(`Missing source contract for ${indicator.slug}.`);
+  }
+
   const existingLatest = existingLatestMap.get(indicator.slug);
   const existingSync = existingSyncMap.get(indicator.slug);
   const existingSuccessAt =
@@ -398,7 +507,7 @@ async function runAttempt(
     null;
   const consecutiveFailures = existingSync?.consecutive_failures ?? 0;
 
-  if (indicator.provider.type === "manual") {
+  if (sourceContract?.liveSupport === "manual-only") {
     return {
       slug: indicator.slug,
       refreshed: false,
@@ -406,9 +515,9 @@ async function runAttempt(
       syncStatusRow: {
         slug: indicator.slug,
         module: indicator.module,
-        provider_type: indicator.provider.type,
-        source_name: indicator.source.name,
-        source_url: indicator.source.url ?? null,
+        provider_type: sourceContract.primary.provider,
+        source_name: sourceContract.primary.sourceName,
+        source_url: sourceContract.primary.sourceUrl ?? null,
         status: "fallback",
         last_attempted_fetch: null,
         last_successful_fetch: existingSuccessAt,
@@ -417,7 +526,7 @@ async function runAttempt(
         last_items_fetched: null,
         last_parse_status: "manual-fallback",
         last_error: null,
-        fallback_usage_reason: "Seed/manual fallback value.",
+        fallback_usage_reason: "Manual seed value; no live source contract is configured for this indicator yet.",
         consecutive_failures: 0,
         updated_at: new Date().toISOString()
       }
@@ -432,34 +541,43 @@ async function runAttempt(
     const completedAt = new Date();
     const completedIso = completedAt.toISOString();
     const durationMs = completedAt.getTime() - startedAt.getTime();
+    const outcome = value.outcome;
     const sourcePayload = {
-      provider_type: indicator.provider.type,
-      source_name: value.sourceName,
-      source_url: value.sourceUrl ?? null,
+      provider_type: value.providerType,
+      source_name: outcome.sourceName,
+      source_url: outcome.sourceUrl ?? null,
       updated_at: completedIso,
-      observed_at: value.observedAt,
+      observed_at: outcome.observedAt,
       next_release_at: release.nextReleaseDate ? `${release.nextReleaseDate}T12:00:00Z` : null,
       status: "live",
       freshness_age_minutes: 0,
-      parse_status: value.parseStatus,
-      items_fetched: value.itemsFetched,
+      parse_status: outcome.parseStatus,
+      items_fetched: outcome.itemsFetched,
       last_successful_fetch: completedIso,
       last_failed_fetch: null,
       error_message: null,
-      fallback_usage_reason: null
+      fallback_usage_reason: null,
+      source_contract: {
+        primary_provider: value.sourceContract.primary.provider,
+        backup_provider: value.sourceContract.backup?.provider ?? null,
+        fetch_method: value.sourceEndpoint.fetchMethod,
+        expected_release_cadence: value.sourceContract.expectedReleaseCadence,
+        revision_detection: value.sourceContract.revisionDetection,
+        failure_handling: value.sourceContract.failureHandling
+      }
     } satisfies Record<string, unknown>;
     const fetchLogRow: FetchLogWriteRow = {
       indicator_slug: indicator.slug,
       module: indicator.module,
-      provider_type: indicator.provider.type,
-      source_name: value.sourceName,
-      source_url: value.sourceUrl ?? null,
+      provider_type: value.providerType,
+      source_name: outcome.sourceName,
+      source_url: outcome.sourceUrl ?? null,
       started_at: startedAt.toISOString(),
       completed_at: completedIso,
       duration_ms: durationMs,
       success: true,
-      items_fetched: value.itemsFetched,
-      parse_status: value.parseStatus,
+      items_fetched: outcome.itemsFetched,
+      parse_status: outcome.parseStatus,
       attempt_count: attemptsUsed,
       error_message: null
     };
@@ -472,26 +590,26 @@ async function runAttempt(
       skipped: false,
       observationRow: {
         indicator_slug: indicator.slug,
-        observed_at: value.observedAt,
-        current_value: value.currentValue,
-        prior_value: value.priorValue,
-        change_value: round(value.currentValue - value.priorValue),
-        chart_history: value.chartHistory ?? null,
+        observed_at: outcome.observedAt,
+        current_value: outcome.currentValue,
+        prior_value: outcome.priorValue,
+        change_value: round(outcome.currentValue - outcome.priorValue),
+        chart_history: outcome.chartHistory ?? null,
         source_payload: sourcePayload
       },
       syncStatusRow: {
         slug: indicator.slug,
         module: indicator.module,
-        provider_type: indicator.provider.type,
-        source_name: value.sourceName,
-        source_url: value.sourceUrl ?? null,
+        provider_type: value.providerType,
+        source_name: outcome.sourceName,
+        source_url: outcome.sourceUrl ?? null,
         status: "live",
         last_attempted_fetch: completedIso,
         last_successful_fetch: completedIso,
         last_failed_fetch: null,
         last_duration_ms: durationMs,
-        last_items_fetched: value.itemsFetched,
-        last_parse_status: value.parseStatus,
+        last_items_fetched: outcome.itemsFetched,
+        last_parse_status: outcome.parseStatus,
         last_error: null,
         fallback_usage_reason: null,
         consecutive_failures: 0,
@@ -517,9 +635,9 @@ async function runAttempt(
     const fetchLogRow: FetchLogWriteRow = {
       indicator_slug: indicator.slug,
       module: indicator.module,
-      provider_type: indicator.provider.type,
-      source_name: indicator.source.name,
-      source_url: indicator.source.url ?? null,
+      provider_type: sourceContract?.primary.provider ?? indicator.provider.type,
+      source_name: sourceContract?.primary.sourceName ?? indicator.source.name,
+      source_url: sourceContract?.primary.sourceUrl ?? indicator.source.url ?? null,
       started_at: startedAt.toISOString(),
       completed_at: completedIso,
       duration_ms: durationMs,
@@ -539,9 +657,9 @@ async function runAttempt(
       syncStatusRow: {
         slug: indicator.slug,
         module: indicator.module,
-        provider_type: indicator.provider.type,
-        source_name: indicator.source.name,
-        source_url: indicator.source.url ?? null,
+        provider_type: sourceContract?.primary.provider ?? indicator.provider.type,
+        source_name: sourceContract?.primary.sourceName ?? indicator.source.name,
+        source_url: sourceContract?.primary.sourceUrl ?? indicator.source.url ?? null,
         status,
         last_attempted_fetch: completedIso,
         last_successful_fetch: existingSuccessAt,

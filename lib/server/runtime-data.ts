@@ -6,6 +6,7 @@ import {
   resolveIndicatorStatus,
   toNextReleaseAt
 } from "@/lib/server/data-status";
+import { getIndicatorSourceContract } from "@/lib/server/source-contract";
 import { createSupabaseReadClient, hasSupabaseReadEnv, hasSupabaseWriteEnv } from "@/lib/server/supabase";
 import type { DataHealthPayload, IndicatorHealth, MacroIndicator, ModuleHealth } from "@/types/macro";
 
@@ -235,25 +236,35 @@ export function buildDataHealthPayload(
   indicators: MacroIndicator[],
   generatedAt = new Date().toISOString()
 ): DataHealthPayload {
-  const indicatorHealth: IndicatorHealth[] = indicators.map((indicator) => ({
-    slug: indicator.slug,
-    name: indicator.name,
-    module: indicator.module,
-    provider: indicator.provider.type,
-    sourceName: indicator.source.name,
-    sourceUrl: indicator.source.url,
-    value: indicator.currentValue,
-    priorValue: indicator.priorValue,
-    delta: indicator.change,
-    updatedAt: indicator.updatedAt,
-    nextReleaseAt: indicator.nextReleaseAt,
-    status: indicator.status,
-    freshnessAgeMinutes: indicator.freshnessAgeMinutes,
-    lastSuccessfulFetch: indicator.lastSuccessfulFetch,
-    lastFailedFetch: indicator.lastFailedFetch,
-    errorMessage: indicator.errorMessage,
-    fallbackUsageReason: indicator.fallbackUsageReason
-  }));
+  const indicatorHealth: IndicatorHealth[] = indicators.map((indicator) => {
+    const sourceContract = getIndicatorSourceContract(indicator);
+
+    return {
+      slug: indicator.slug,
+      name: indicator.name,
+      module: indicator.module,
+      provider: indicator.provider.type,
+      primaryProvider: sourceContract?.primary.provider,
+      backupProvider: sourceContract?.backup?.provider,
+      fetchMethod: sourceContract?.primary.fetchMethod,
+      expectedReleaseCadence: sourceContract?.expectedReleaseCadence,
+      revisionDetection: sourceContract?.revisionDetection,
+      failureHandling: sourceContract?.failureHandling,
+      sourceName: indicator.source.name,
+      sourceUrl: indicator.source.url,
+      value: indicator.currentValue,
+      priorValue: indicator.priorValue,
+      delta: indicator.change,
+      updatedAt: indicator.updatedAt,
+      nextReleaseAt: indicator.nextReleaseAt,
+      status: indicator.status,
+      freshnessAgeMinutes: indicator.freshnessAgeMinutes,
+      lastSuccessfulFetch: indicator.lastSuccessfulFetch,
+      lastFailedFetch: indicator.lastFailedFetch,
+      errorMessage: indicator.errorMessage,
+      fallbackUsageReason: indicator.fallbackUsageReason
+    };
+  });
 
   const modules: ModuleHealth[] = macroModules.map((module) => {
     const moduleIndicators = indicatorHealth.filter((indicator) => indicator.module === module.slug);

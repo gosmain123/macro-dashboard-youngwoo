@@ -21,65 +21,63 @@ export function WorkspaceToolbar() {
   }
 
   return (
-    <div className="rounded-[28px] border border-white/10 bg-white/5 p-4 shadow-soft backdrop-blur-xl">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="surface-card rounded-[28px] p-4 md:p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">Workspace</p>
-          <p className="mt-2 text-sm text-slate-300">
+          <p className="section-kicker">Workspace</p>
+          <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
             {pinnedSlugs.length} pinned | {watchlistSlugs.length} in watchlist | {hiddenSlugs.length} hidden
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={handleSaveSnapshot}
-            className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/40"
-          >
-            <Camera className="h-3.5 w-3.5" />
-            Save snapshot
+          <button type="button" onClick={handleSaveSnapshot} className="soft-button-accent rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.16em] transition">
+            <span className="inline-flex items-center gap-2">
+              <Camera className="h-3.5 w-3.5" />
+              Save snapshot
+            </span>
           </button>
-          <button
-            type="button"
-            onClick={resetWorkspace}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-200 transition hover:border-white/20 hover:text-white"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset view
+          <button type="button" onClick={resetWorkspace} className="soft-button rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.16em] transition">
+            <span className="inline-flex items-center gap-2">
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset view
+            </span>
           </button>
         </div>
       </div>
 
       {savedSnapshots.length > 0 ? (
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {savedSnapshots.slice(0, 6).map((snapshot) => (
-            <div key={snapshot.id} className="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-white">{snapshot.name}</p>
-                  <p className="mt-1 text-xs text-slate-500">{formatTimestamp(snapshot.savedAt)}</p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    {snapshot.pinnedCount} pinned | {snapshot.watchlistCount} watchlist
-                  </p>
+        <details className="surface-inset mt-4 rounded-[22px] p-4">
+          <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--text-primary)]">
+            Saved snapshots ({savedSnapshots.length})
+          </summary>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {savedSnapshots.slice(0, 6).map((snapshot) => (
+              <div key={snapshot.id} className="surface-card rounded-[20px] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[color:var(--text-primary)]">{snapshot.name}</p>
+                    <p className="mt-1 text-xs text-[color:var(--text-muted)]">{formatTimestamp(snapshot.savedAt)}</p>
+                    <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+                      {snapshot.pinnedCount} pinned | {snapshot.watchlistCount} watchlist
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeSnapshot(snapshot.id)}
+                    className="soft-button rounded-full p-2 transition"
+                    aria-label={`Remove ${snapshot.name}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeSnapshot(snapshot.id)}
-                  className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-400 transition hover:border-white/20 hover:text-white"
-                  aria-label={`Remove ${snapshot.name}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
 
-              <Link
-                href={snapshot.path}
-                className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-200 transition hover:border-white/20 hover:text-white"
-              >
-                Open snapshot route
-              </Link>
-            </div>
-          ))}
-        </div>
+                <Link href={snapshot.path} className="soft-button mt-3 inline-flex rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.16em] transition">
+                  Open snapshot route
+                </Link>
+              </div>
+            ))}
+          </div>
+        </details>
       ) : null}
     </div>
   );

@@ -214,6 +214,12 @@ export interface IndicatorHealth {
   name: string;
   module: MacroModuleSlug;
   provider: ProviderType;
+  primaryProvider?: ProviderType;
+  backupProvider?: ProviderType;
+  fetchMethod?: string;
+  expectedReleaseCadence?: string;
+  revisionDetection?: string;
+  failureHandling?: string;
   sourceName: string;
   sourceUrl?: string;
   value: number;

@@ -157,7 +157,7 @@ export function formatReleaseLabel(date?: string, timeLabel?: string) {
     return "Schedule pending";
   }
 
-  return timeLabel ? `${formatDateLabel(date)} · ${timeLabel}` : formatDateLabel(date);
+  return timeLabel ? `${formatDateLabel(date)} | ${timeLabel}` : formatDateLabel(date);
 }
 
 export function formatCalendarDate(value: string) {
@@ -168,3 +168,4 @@ export function formatCalendarDate(value: string) {
     timeZone: "UTC"
   }).format(new Date(`${value}T12:00:00Z`));
 }
+

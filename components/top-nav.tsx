@@ -3,22 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { UserModeToggle } from "@/components/user-mode-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { macroModules } from "@/lib/data/modules";
 import { cn } from "@/lib/utils";
 
 const primaryModuleSlugs = ["inflation", "growth", "labor", "rates-credit"] as const;
 const layerLinks = [
   { href: "/liquidity", label: "Liquidity" },
-  { href: "/global-spillover", label: "FX & Commodities" },
-  { href: "/policy-expectations", label: "Policy Expectations" },
+  { href: "/global-spillover", label: "Global" },
+  { href: "/policy-expectations", label: "Policy" },
   { href: "/positioning", label: "Positioning" }
 ] as const;
 
 const topLinks = [
   { href: "/", label: "Dashboard" },
-  { href: "/playbook", label: "Playbook" },
+  { href: "/macro-flow", label: "Macro Flow" },
   { href: "/workflow", label: "Workflow" },
+  { href: "/calendar", label: "Calendar" },
   ...primaryModuleSlugs.map((slug) => {
     const moduleEntry = macroModules.find((entry) => entry.slug === slug);
 
@@ -27,31 +28,24 @@ const topLinks = [
       label: moduleEntry?.title ?? slug
     };
   }),
-  ...layerLinks,
-  { href: "/calendar", label: "Calendar" }
+  ...layerLinks
 ];
 
 export function TopNav() {
   const pathname = usePathname();
 
   return (
-    <div className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
+    <div className="sticky top-0 z-40 border-b border-[color:var(--border-soft)] bg-[color:var(--nav-surface)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link href="/" className="space-y-1">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-200">
-              Macro Signal Deck
-            </div>
-            <div className="text-lg font-semibold text-white">Daily macro monitor</div>
+            <div className="section-kicker">Macro Signal Deck</div>
+            <div className="text-lg font-semibold text-[color:var(--text-primary)]">Calmer macro dashboard</div>
           </Link>
-          <div className="hidden sm:block">
-            <UserModeToggle />
-          </div>
+          <ThemeToggle />
         </div>
-        <div className="sm:hidden">
-          <UserModeToggle />
-        </div>
-        <nav className="flex gap-2 overflow-x-auto pb-1">
+
+        <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Top navigation">
           {topLinks.map((link) => {
             const active = pathname === link.href;
 
@@ -60,10 +54,8 @@ export function TopNav() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "whitespace-nowrap rounded-full border px-3 py-2 text-sm font-medium transition",
-                  active
-                    ? "border-cyan-300/70 bg-cyan-300/15 text-white"
-                    : "border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
+                  "whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium transition",
+                  active ? "soft-nav-link-active" : "soft-nav-link"
                 )}
               >
                 {link.label}

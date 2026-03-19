@@ -19,58 +19,58 @@ export function ModuleDashboard({
   const { applyIndicatorPreferences } = useWorkspace();
   const visibleIndicators = applyIndicatorPreferences(indicators);
   const official = visibleIndicators.filter((indicator) => indicator.source.access === "official-free").length;
-  const manual = visibleIndicators.length - official;
   const live = visibleIndicators.filter((indicator) => indicator.dataStatus === "live").length;
   const staleLive = visibleIndicators.filter((indicator) => indicator.dataStatus === "stale-live").length;
   const fallback = visibleIndicators.filter((indicator) => indicator.dataStatus === "fallback").length;
   const error = visibleIndicators.filter((indicator) => indicator.dataStatus === "error").length;
 
   return (
-    <div className="space-y-8">
-      <WorkspaceToolbar />
+    <div className="space-y-6">
+      <section className="surface-card rounded-[32px] p-6 md:p-8">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <p className="section-kicker">{module.kicker}</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[color:var(--text-primary)] md:text-4xl">
+              {module.title}
+            </h1>
+            <p className="mt-3 text-base leading-7 text-[color:var(--text-secondary)]">{module.description}</p>
+          </div>
 
-      <section className="rounded-[34px] border border-white/10 bg-white/5 p-6 shadow-soft backdrop-blur-xl md:p-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-200">{module.kicker}</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">{module.title}</h1>
-        <p className="mt-4 max-w-3xl text-lg leading-7 text-slate-300 mode-beginner-only">{module.description}</p>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
-            <div className="flex items-center gap-2 text-slate-400">
-              <BarChart3 className="h-4 w-4" />
-              Indicators tracked
+          <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[34rem]">
+            <div className="surface-inset rounded-[22px] p-4">
+              <div className="flex items-center gap-2 text-[color:var(--text-muted)]">
+                <BarChart3 className="h-4 w-4" />
+                Indicators
+              </div>
+              <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{visibleIndicators.length}</p>
             </div>
-            <p className="mt-3 text-3xl font-semibold text-white">{visibleIndicators.length}</p>
-          </div>
-          <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Database className="h-4 w-4" />
-              Live status mix
+            <div className="surface-inset rounded-[22px] p-4">
+              <div className="flex items-center gap-2 text-[color:var(--text-muted)]">
+                <Database className="h-4 w-4" />
+                Live mix
+              </div>
+              <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">
+                {live} / {staleLive} / {fallback} / {error}
+              </p>
+              <p className="mt-1 text-xs text-[color:var(--text-muted)]">live / stale-live / fallback / error</p>
             </div>
-            <p className="mt-3 text-3xl font-semibold text-white">
-              {live} / {staleLive} / {fallback} / {error}
-            </p>
-            <p className="mt-2 text-sm text-slate-500">
-              {dataMode === "live"
-                ? "Order: live / stale-live / fallback / error"
-                : "Live storage is unavailable, so cards are showing fallback or error states"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Database className="h-4 w-4" />
-              Official / manual sources
+            <div className="surface-inset rounded-[22px] p-4">
+              <div className="flex items-center gap-2 text-[color:var(--text-muted)]">
+                <Database className="h-4 w-4" />
+                Sources
+              </div>
+              <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{official} official</p>
+              <p className="mt-1 text-xs text-[color:var(--text-muted)]">
+                {dataMode === "live" ? "Trust badges stay on-card." : "Fallback remains clearly labeled."}
+              </p>
             </div>
-            <p className="mt-3 text-3xl font-semibold text-white">
-              {official} / {manual}
-            </p>
-            <p className="mt-2 text-sm text-slate-500">
-              Source labels and updated dates are shown on every card
-            </p>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-2">
+      <WorkspaceToolbar />
+
+      <section className="grid auto-rows-fr gap-4 xl:grid-cols-2">
         {visibleIndicators.map((indicator) => (
           <IndicatorCard key={indicator.slug} indicator={indicator} visibleSlugs={visibleIndicators.map((entry) => entry.slug)} />
         ))}
@@ -78,4 +78,3 @@ export function ModuleDashboard({
     </div>
   );
 }
-

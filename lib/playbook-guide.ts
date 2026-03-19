@@ -607,5 +607,5 @@ export function getLogicChainForIndicator(slug: string) {
 }
 
 export function getLogicChainHref(id: string) {
-  return `/playbook#${id}`;
+  return `/macro-flow#${id}`;
 }
