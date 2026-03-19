@@ -23,7 +23,17 @@ export type IndicatorTone = "positive" | "negative" | "neutral";
 
 export type RefreshScope = "market" | "daily" | "all";
 
-export type ProviderType = "fred" | "manual";
+export type ProviderType =
+  | "bea"
+  | "bls"
+  | "census"
+  | "dol"
+  | "fed"
+  | "fred"
+  | "fred-backup"
+  | "ism"
+  | "manual"
+  | "treasury";
 
 export type FreshnessStatus = "fresh" | "stale";
 export type IndicatorDataStatus = "live" | "fallback";
