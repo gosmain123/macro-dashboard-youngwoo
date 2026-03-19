@@ -1,3 +1,4 @@
+import { getChartHistoryPointTarget, getRequiredObservationLimit } from "@/lib/chart-frequency";
 import { macroIndicators } from "@/lib/data";
 import { fetchFredObservations, type FredObservation } from "@/lib/server/providers/fred";
 import { seriesConfigBySlug, type SeriesConfig } from "@/lib/server/series-config";
@@ -84,6 +85,47 @@ function transformObservation(
   };
 }
 
+function getConfigSeriesIds(config: SeriesConfig) {
+  if (config.seriesId) {
+    return [config.seriesId];
+  }
+
+  return (config.inputs ?? []).map((input) => input.seriesId);
+}
+
+function combineObservations(rawSeriesMap: Record<string, FredObservation[]>, config: SeriesConfig): FredObservation[] {
+  if (config.seriesId) {
+    return rawSeriesMap[config.seriesId] ?? [];
+  }
+
+  if (!config.inputs || config.inputs.length === 0) {
+    return [];
+  }
+
+  const perDate = new Map<string, { count: number; value: number }>();
+
+  for (const input of config.inputs) {
+    const weight = input.weight ?? 1;
+    const observations = rawSeriesMap[input.seriesId] ?? [];
+
+    for (const observation of observations) {
+      const existing = perDate.get(observation.date) ?? { count: 0, value: 0 };
+      perDate.set(observation.date, {
+        count: existing.count + 1,
+        value: existing.value + observation.value * weight
+      });
+    }
+  }
+
+  return [...perDate.entries()]
+    .filter(([, value]) => value.count === config.inputs?.length)
+    .map(([date, value]) => ({
+      date,
+      value: value.value
+    }))
+    .sort((left, right) => left.date.localeCompare(right.date));
+}
+
 function buildSeries(observations: FredObservation[], config: SeriesConfig): ChartPoint[] {
   return observations
     .map((_, index) => transformObservation(observations, index, config))
@@ -114,14 +156,30 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
   const supabase = createSupabaseAdminClient();
   const refreshed: string[] = [];
   const uniqueSeriesIds = [
-    ...new Set(eligible.map((indicator) => seriesConfigBySlug[indicator.slug]?.seriesId).filter(Boolean))
+    ...new Set(
+      eligible.flatMap((indicator) => {
+        const config = seriesConfigBySlug[indicator.slug];
+        return config ? getConfigSeriesIds(config) : [];
+      })
+    )
   ] as string[];
   const rawSeriesEntries = await Promise.all(
     uniqueSeriesIds.map(async (seriesId) => {
       const limit = Math.max(
         ...eligible
-          .filter((indicator) => seriesConfigBySlug[indicator.slug]?.seriesId === seriesId)
-          .map((indicator) => seriesConfigBySlug[indicator.slug]?.limit ?? 48)
+          .filter((indicator) => {
+            const indicatorConfig = seriesConfigBySlug[indicator.slug];
+            return indicatorConfig ? getConfigSeriesIds(indicatorConfig).includes(seriesId) : false;
+          })
+          .map((indicator) =>
+            Math.max(
+              seriesConfigBySlug[indicator.slug]?.limit ?? 0,
+              getRequiredObservationLimit(
+                indicator.frequency,
+                seriesConfigBySlug[indicator.slug]?.transform ?? "level"
+              )
+            )
+          )
       );
 
       return [seriesId, await fetchFredObservations(seriesId, limit)] as const;
@@ -136,7 +194,8 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
       continue;
     }
 
-    const transformed = buildSeries(rawSeriesMap[config.seriesId] ?? [], config);
+    const rawObservations = combineObservations(rawSeriesMap, config);
+    const transformed = buildSeries(rawObservations, config);
 
     if (transformed.length < 2) {
       skipped.push(indicator.slug);
@@ -186,7 +245,7 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
         current_value: current.value,
         prior_value: prior.value,
         change_value: round(current.value - prior.value),
-        chart_history: transformed.slice(-24)
+        chart_history: transformed.slice(-getChartHistoryPointTarget(indicator.frequency))
       },
       { onConflict: "indicator_slug,observed_at" }
     );

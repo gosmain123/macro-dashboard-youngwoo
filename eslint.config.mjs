@@ -29,6 +29,6 @@ export default tseslint.config(
     }
   },
   {
-    ignores: [".next/**", "node_modules/**"]
+    ignores: ["dist/**", ".next/**", "node_modules/**", "next-env.d.ts", "**/*.config.mjs", "**/*.config.js"]
   }
 );

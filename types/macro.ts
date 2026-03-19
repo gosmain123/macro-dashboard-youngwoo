@@ -19,13 +19,18 @@ export type FeedAccess = "official-free" | "licensed-manual";
 
 export type Frequency = "Daily" | "Weekly" | "Monthly" | "Quarterly" | "Live";
 
-export type ExperienceMode = "beginner" | "advanced";
-
 export type IndicatorTone = "positive" | "negative" | "neutral";
 
 export type RefreshScope = "market" | "daily" | "all";
 
 export type ProviderType = "fred" | "manual";
+
+export type FreshnessStatus = "fresh" | "stale";
+export type IndicatorDataStatus = "live" | "fallback";
+export type IndicatorCardStatus = "live" | "stale" | "fallback";
+export type IndicatorReleaseType = "scheduled" | "market" | "continuous";
+export type ReleaseRevisionFlag = "none" | "revised" | "pending";
+export type ReleaseSurpriseFlag = "above" | "below" | "inline" | "pending";
 
 export interface IndicatorTooltip {
   definition: string;
@@ -51,6 +56,16 @@ export interface IndicatorProviderConfig {
   seriesId?: string;
 }
 
+export interface IndicatorRelease {
+  type: IndicatorReleaseType;
+  label: string;
+  nextReleaseDate?: string;
+  timeLabel?: string;
+  detail: string;
+  sourceName?: string;
+  sourceUrl?: string;
+}
+
 export interface MacroIndicator {
   slug: string;
   name: string;
@@ -61,10 +76,16 @@ export interface MacroIndicator {
   priorValue: number;
   change: number;
   unit: string;
+  unitLabel: string;
   frequency: Frequency;
   source: IndicatorSource;
   tooltips: IndicatorTooltip;
   chartHistory: ChartPoint[];
+  lastUpdated: string;
+  dataStatus: IndicatorDataStatus;
+  status: IndicatorCardStatus;
+  freshnessStatus: FreshnessStatus;
+  release: IndicatorRelease;
   regimeTag: string;
   summary: string;
   advancedSummary: string;
@@ -91,15 +112,12 @@ export interface RegimeCard {
   score: number;
   label: string;
   status: string;
-  description: string;
   drivers: string[];
 }
 
 export interface RegimeSnapshot {
   title: string;
   summary: string;
-  labels: string[];
-  watchItems: string[];
 }
 
 export interface CalendarEvent {
@@ -123,6 +141,26 @@ export interface PlaybookScenario {
   dashboardFocus: string[];
 }
 
+export type HomepageIndicator = MacroIndicator;
+
+export interface DashboardFreshness {
+  lastUpdated: string;
+  refreshCadence: string;
+  freshnessStatus: FreshnessStatus;
+  staleAfterMinutes: number;
+  minutesSinceUpdate: number;
+  officialCount: number;
+  manualCount: number;
+  liveCount: number;
+  fallbackCount: number;
+}
+
+export interface HomepagePayload {
+  watchlist: HomepageIndicator[];
+  keyEvents: CalendarEvent[];
+  freshness: DashboardFreshness;
+}
+
 export interface DashboardPayload {
   dataMode: "demo" | "live";
   modules: MacroModule[];
@@ -131,6 +169,7 @@ export interface DashboardPayload {
   regimeSnapshot: RegimeSnapshot;
   calendarEvents: CalendarEvent[];
   playbooks: PlaybookScenario[];
+  homepage: HomepagePayload;
 }
 
 export interface RefreshResult {
@@ -140,4 +179,77 @@ export interface RefreshResult {
   dataMode: "demo" | "live";
   refreshed: string[];
   skipped: string[];
+}
+
+export interface WorkflowReleaseRadarItem {
+  id: string;
+  indicatorSlug: string;
+  indicatorName: string;
+  module: MacroModuleSlug;
+  moduleTitle: string;
+  sourceName: string;
+  sourceUrl?: string;
+  nextReleaseDate?: string;
+  timeLabel?: string;
+  priorValue: number;
+  latestActualValue: number;
+  consensusValue?: number | null;
+  unit: string;
+  unitLabel: string;
+  revisionFlag: ReleaseRevisionFlag;
+  surpriseFlag: ReleaseSurpriseFlag;
+  surpriseMagnitude?: number | null;
+  linkedIndicators: string[];
+  note: string;
+  status: IndicatorCardStatus;
+}
+
+export interface WorkflowSurpriseItem {
+  id: string;
+  indicatorSlug: string;
+  indicatorName: string;
+  category: "inflation" | "growth" | "labor" | "policy";
+  releaseDate: string;
+  sourceName: string;
+  sourceUrl?: string;
+  actualValue: number;
+  priorValue: number;
+  consensusValue?: number | null;
+  revisedFrom?: number | null;
+  revisedTo?: number | null;
+  revisionFlag: ReleaseRevisionFlag;
+  surpriseFlag: ReleaseSurpriseFlag;
+  surpriseMagnitude?: number | null;
+  unit: string;
+  unitLabel: string;
+  whyItMatters: string;
+  linkedIndicators: string[];
+  status: IndicatorCardStatus;
+}
+
+export interface WorkflowHeadlineItem {
+  id: string;
+  bucket: "Official releases" | "Market interpretation" | "Fed / central bank";
+  publishedAt: string;
+  sourceName: string;
+  sourceUrl: string;
+  title: string;
+  whyItMatters: string;
+  linkedIndicators: string[];
+}
+
+export interface WorkflowChangeItem {
+  id: string;
+  bucket: "Indicator shifts" | "Cross-asset moves" | "New releases" | "Up next";
+  title: string;
+  detail: string;
+  linkedIndicators: string[];
+}
+
+export interface WorkflowPayload {
+  updatedAt: string;
+  releaseRadar: WorkflowReleaseRadarItem[];
+  surprises: WorkflowSurpriseItem[];
+  headlines: WorkflowHeadlineItem[];
+  changes: WorkflowChangeItem[];
 }

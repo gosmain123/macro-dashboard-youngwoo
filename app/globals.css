@@ -4,6 +4,8 @@
 
 :root {
   color-scheme: dark;
+  --font-body: "Aptos", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-heading: "Aptos Display", "Segoe UI Variable Display", "Trebuchet MS", "Arial Narrow", sans-serif;
 }
 
 * {

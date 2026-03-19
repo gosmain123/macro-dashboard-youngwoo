@@ -10,6 +10,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 14.8,
     priorValue: 15.6,
     unit: "pts",
+    unitLabel: "Index level",
     frequency: "Daily",
     source: {
       name: "Cboe",
@@ -43,6 +44,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 92,
     priorValue: 96,
     unit: "pts",
+    unitLabel: "Index level",
     frequency: "Daily",
     source: {
       name: "ICE / Treasury volatility feed",
@@ -76,6 +78,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 102.4,
     priorValue: 103.1,
     unit: "pts",
+    unitLabel: "Index level",
     frequency: "Daily",
     source: {
       name: "ICE / blended FX feed",
@@ -108,10 +111,11 @@ const blueprints: IndicatorBlueprint[] = [
     dimension: "inflation",
     currentValue: 76.4,
     priorValue: 74.8,
-    unit: "pts",
+    unit: "usd",
+    unitLabel: "Daily close",
     frequency: "Daily",
     source: {
-      name: "FRED / market feed",
+      name: "FRED WTI spot",
       url: "https://fred.stlouisfed.org/series/DCOILWTICO",
       access: "official-free"
     },
@@ -142,7 +146,8 @@ const blueprints: IndicatorBlueprint[] = [
     dimension: "risk-appetite",
     currentValue: 2215,
     priorValue: 2192,
-    unit: "pts",
+    unit: "usd/oz",
+    unitLabel: "USD per ounce",
     frequency: "Daily",
     source: {
       name: "FRED / market feed",

@@ -10,6 +10,14 @@ export function formatIndicatorValue(value: number, unit: string) {
     return `${value.toFixed(1)}%`;
   }
 
+  if (unit === "usd") {
+    return `$${value.toFixed(1)}`;
+  }
+
+  if (unit === "usd/oz") {
+    return `$${Math.round(value)}`;
+  }
+
   if (unit === "bps") {
     return `${Math.round(value)} bps`;
   }
@@ -56,6 +64,14 @@ export function formatChange(value: number, unit: string) {
     return `${sign}${value.toFixed(1)}pp`;
   }
 
+  if (unit === "usd") {
+    return `${sign}$${value.toFixed(1)}`;
+  }
+
+  if (unit === "usd/oz") {
+    return `${sign}$${Math.round(value)}`;
+  }
+
   if (unit === "bps") {
     return `${sign}${Math.round(value)} bps`;
   }
@@ -84,4 +100,48 @@ export function titleCase(value: string) {
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+export function formatTimestamp(value: string) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "Unavailable";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short"
+  }).format(parsed);
+}
+
+export function formatDateLabel(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(`${value}T12:00:00Z`));
+}
+
+export function formatReleaseLabel(date?: string, timeLabel?: string) {
+  if (!date) {
+    return "Schedule pending";
+  }
+
+  return timeLabel ? `${formatDateLabel(date)} · ${timeLabel}` : formatDateLabel(date);
+}
+
+export function formatCalendarDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    weekday: "short",
+    timeZone: "UTC"
+  }).format(new Date(`${value}T12:00:00Z`));
 }

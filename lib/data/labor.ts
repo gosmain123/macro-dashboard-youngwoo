@@ -10,10 +10,11 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 182,
     priorValue: 171,
     unit: "k",
+    unitLabel: "Monthly change, thousands",
     frequency: "Monthly",
     source: {
-      name: "BLS via FRED",
-      url: "https://fred.stlouisfed.org/series/PAYEMS",
+      name: "BLS Employment Situation",
+      url: "https://www.bls.gov/news.release/empsit.nr0.htm",
       access: "official-free"
     },
     tooltips: laborTooltip(
@@ -28,7 +29,7 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Revisions", "Unemployment rate", "Hours worked"],
     signalScore: 0.6,
     tone: "positive",
-    releaseCadence: "Monthly, first Friday",
+    releaseCadence: "Monthly, first Friday at 8:30 AM ET",
     provider: { type: "fred", seriesId: "PAYEMS" },
     trendSlope: 2,
     volatility: 6,
@@ -44,10 +45,11 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 4.1,
     priorValue: 4,
     unit: "%",
+    unitLabel: "Percent",
     frequency: "Monthly",
     source: {
-      name: "BLS via FRED",
-      url: "https://fred.stlouisfed.org/series/UNRATE",
+      name: "BLS Employment Situation",
+      url: "https://www.bls.gov/news.release/empsit.nr0.htm",
       access: "official-free"
     },
     tooltips: laborTooltip(
@@ -62,7 +64,7 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Initial claims", "Participation rate", "Sahm-style risk checks"],
     signalScore: -0.2,
     tone: "neutral",
-    releaseCadence: "Monthly, first Friday",
+    releaseCadence: "Monthly, first Friday at 8:30 AM ET",
     provider: { type: "fred", seriesId: "UNRATE" },
     trendSlope: 0.02,
     volatility: 0.03,
@@ -78,6 +80,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 62.8,
     priorValue: 62.7,
     unit: "%",
+    unitLabel: "Percent",
     frequency: "Monthly",
     source: {
       name: "BLS via FRED",
@@ -112,10 +115,11 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 224,
     priorValue: 229,
     unit: "k",
+    unitLabel: "Thousands",
     frequency: "Weekly",
     source: {
-      name: "DOL via FRED",
-      url: "https://fred.stlouisfed.org/series/ICSA",
+      name: "U.S. Department of Labor",
+      url: "https://www.dol.gov/newsroom/releases",
       access: "official-free"
     },
     tooltips: laborTooltip(
@@ -130,7 +134,7 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Four-week average", "Continuing claims", "Hiring intentions"],
     signalScore: 0.4,
     tone: "positive",
-    releaseCadence: "Weekly, Thursdays",
+    releaseCadence: "Weekly, Thursdays at 8:30 AM ET",
     provider: { type: "fred", seriesId: "ICSA" },
     trendSlope: -0.2,
     volatility: 2,
@@ -146,6 +150,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 1.84,
     priorValue: 1.85,
     unit: "m",
+    unitLabel: "Millions",
     frequency: "Weekly",
     source: {
       name: "DOL via FRED",
@@ -180,6 +185,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 8.4,
     priorValue: 8.6,
     unit: "m",
+    unitLabel: "Millions",
     frequency: "Monthly",
     source: {
       name: "BLS via FRED",
@@ -214,6 +220,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 2.1,
     priorValue: 2.2,
     unit: "%",
+    unitLabel: "Percent",
     frequency: "Monthly",
     source: {
       name: "BLS via FRED",
@@ -248,6 +255,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 34.4,
     priorValue: 34.3,
     unit: "hours",
+    unitLabel: "Hours",
     frequency: "Monthly",
     source: {
       name: "BLS via FRED",

@@ -10,10 +10,11 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 3.1,
     priorValue: 3.3,
     unit: "%",
+    unitLabel: "YoY %",
     frequency: "Monthly",
     source: {
-      name: "BLS via FRED",
-      url: "https://fred.stlouisfed.org/series/CPIAUCSL",
+      name: "BLS CPI",
+      url: "https://www.bls.gov/cpi/",
       access: "official-free"
     },
     tooltips: inflationTooltip(
@@ -45,10 +46,11 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 3.4,
     priorValue: 3.6,
     unit: "%",
+    unitLabel: "YoY %",
     frequency: "Monthly",
     source: {
-      name: "BLS via FRED",
-      url: "https://fred.stlouisfed.org/series/CPILFESL",
+      name: "BLS CPI",
+      url: "https://www.bls.gov/cpi/",
       access: "official-free"
     },
     tooltips: inflationTooltip(
@@ -77,17 +79,18 @@ const blueprints: IndicatorBlueprint[] = [
     shortName: "PPI",
     module: "inflation",
     dimension: "inflation",
-    currentValue: 2.2,
-    priorValue: 2.4,
+    currentValue: 3.4,
+    priorValue: 3,
     unit: "%",
+    unitLabel: "YoY %",
     frequency: "Monthly",
     source: {
-      name: "BLS via FRED",
-      url: "https://fred.stlouisfed.org/series/PPIACO",
+      name: "BLS PPI",
+      url: "https://www.bls.gov/ppi/",
       access: "official-free"
     },
     tooltips: inflationTooltip(
-      "Producer Price Index tracks price changes received by domestic producers for final demand.",
+      "Producer Price Index final demand tracks price changes received by domestic producers for final demand goods, services, and construction.",
       "Use it as an early signal for pipeline inflation. A renewed PPI surge can feed into CPI and margins with a lag.",
       "Watch goods-sensitive categories, import prices, and shipping costs."
     ),
@@ -98,8 +101,8 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Commodity complex", "Import prices", "Goods margins"],
     signalScore: -0.5,
     tone: "positive",
-    releaseCadence: "Monthly, usually before CPI",
-    provider: { type: "fred", seriesId: "PPIACO" },
+    releaseCadence: "Monthly, 8:30 AM ET",
+    provider: { type: "fred", seriesId: "PPIFIS" },
     trendSlope: -0.03,
     volatility: 0.05,
     minValue: -1,
@@ -114,10 +117,11 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 2.8,
     priorValue: 2.9,
     unit: "%",
+    unitLabel: "YoY %",
     frequency: "Monthly",
     source: {
-      name: "BEA via FRED",
-      url: "https://fred.stlouisfed.org/series/PCEPILFE",
+      name: "BEA Personal Income and Outlays",
+      url: "https://www.bea.gov/news/2026/personal-income-and-outlays-december-2025",
       access: "official-free"
     },
     tooltips: inflationTooltip(
@@ -149,10 +153,11 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 3.8,
     priorValue: 4.0,
     unit: "%",
+    unitLabel: "YoY %",
     frequency: "Monthly",
     source: {
-      name: "BLS via FRED",
-      url: "https://fred.stlouisfed.org/series/CES0500000003",
+      name: "BLS Employment Situation",
+      url: "https://www.bls.gov/ces/home.htm",
       access: "official-free"
     },
     tooltips: laborTooltip(
@@ -183,6 +188,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 2.3,
     priorValue: 2.2,
     unit: "%",
+    unitLabel: "Breakeven %",
     frequency: "Daily",
     source: {
       name: "FRED",

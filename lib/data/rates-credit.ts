@@ -10,6 +10,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 4.28,
     priorValue: 4.34,
     unit: "%",
+    unitLabel: "Yield %",
     frequency: "Daily",
     source: {
       name: "Treasury via FRED",
@@ -44,6 +45,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 4.02,
     priorValue: 4.08,
     unit: "%",
+    unitLabel: "Yield %",
     frequency: "Daily",
     source: {
       name: "Treasury via FRED",
@@ -78,6 +80,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: -26,
     priorValue: -26,
     unit: "bps",
+    unitLabel: "bps",
     frequency: "Daily",
     source: {
       name: "Treasury curve via FRED",
@@ -112,6 +115,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: -58,
     priorValue: -64,
     unit: "bps",
+    unitLabel: "bps",
     frequency: "Daily",
     source: {
       name: "Treasury curve via FRED",
@@ -146,6 +150,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 102,
     priorValue: 105,
     unit: "bps",
+    unitLabel: "bps",
     frequency: "Daily",
     source: {
       name: "ICE BofA via FRED",
@@ -180,6 +185,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 356,
     priorValue: 369,
     unit: "bps",
+    unitLabel: "bps",
     frequency: "Daily",
     source: {
       name: "ICE BofA via FRED",
@@ -214,6 +220,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 6.38,
     priorValue: 6.49,
     unit: "%",
+    unitLabel: "Mortgage rate %",
     frequency: "Weekly",
     source: {
       name: "Freddie Mac via FRED",
@@ -248,6 +255,7 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 1.68,
     priorValue: 1.74,
     unit: "%",
+    unitLabel: "Yield %",
     frequency: "Daily",
     source: {
       name: "FRED",

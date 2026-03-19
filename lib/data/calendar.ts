@@ -2,11 +2,11 @@ import type { CalendarEvent } from "@/types/macro";
 
 export const calendarEvents: CalendarEvent[] = [
   {
-    id: "fomc-march",
+    id: "fomc-may",
     title: "FOMC Rate Decision",
     module: "policy-liquidity",
     category: "central bank",
-    date: "2026-03-18",
+    date: "2026-05-06",
     timeLabel: "2:00 PM ET",
     importance: "high",
     whyItMatters:
@@ -32,7 +32,7 @@ export const calendarEvents: CalendarEvent[] = [
     title: "Core PCE Release",
     module: "inflation",
     category: "macro release",
-    date: "2026-03-27",
+    date: "2026-04-09",
     timeLabel: "8:30 AM ET",
     importance: "high",
     whyItMatters:
@@ -65,6 +65,19 @@ export const calendarEvents: CalendarEvent[] = [
       "CPI can reprice front-end yields fast because it immediately shifts inflation and Fed expectations.",
     whatToWatch:
       "Watch core services, shelter, and the three-month annualized trend before declaring the print benign or hot."
+  },
+  {
+    id: "ppi-release",
+    title: "PPI Report",
+    module: "inflation",
+    category: "macro release",
+    date: "2026-04-14",
+    timeLabel: "8:30 AM ET",
+    importance: "high",
+    whyItMatters:
+      "PPI is an early pipeline read for inflation pressure that can shape expectations for future CPI and Core PCE prints.",
+    whatToWatch:
+      "Watch core measures, revisions, and whether goods pressure starts bleeding back into the consumer inflation pipeline."
   },
   {
     id: "boj-meeting",

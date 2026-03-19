@@ -7,13 +7,15 @@ const blueprints: IndicatorBlueprint[] = [
     shortName: "GDP Now",
     module: "growth",
     dimension: "growth",
-    currentValue: 2.1,
-    priorValue: 2.0,
+    currentValue: 2.7,
+    priorValue: 2.3,
     unit: "%",
+    unitLabel: "SAAR %",
     frequency: "Weekly",
     source: {
-      name: "Atlanta Fed / internal blended nowcast",
-      access: "licensed-manual"
+      name: "Atlanta Fed GDPNow",
+      url: "https://www.atlantafed.org/research-and-data/data/gdpnow",
+      access: "official-free"
     },
     tooltips: growthTooltip(
       "A nowcast estimates current-quarter GDP before the official release arrives.",
@@ -27,7 +29,7 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Retail control group", "Industrial production", "Inventories"],
     signalScore: 0.8,
     tone: "positive",
-    releaseCadence: "Weekly and after major releases",
+    releaseCadence: "Updated after major source releases",
     provider: { type: "manual" },
     trendSlope: 0.03,
     volatility: 0.04,
@@ -40,13 +42,15 @@ const blueprints: IndicatorBlueprint[] = [
     shortName: "ISM Mfg",
     module: "growth",
     dimension: "growth",
-    currentValue: 50.8,
-    priorValue: 49.9,
+    currentValue: 52.4,
+    priorValue: 52.6,
     unit: "index",
+    unitLabel: "Index level",
     frequency: "Monthly",
     source: {
-      name: "ISM survey feed",
-      access: "licensed-manual"
+      name: "ISM Manufacturing PMI",
+      url: "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/pmi/february/",
+      access: "official-free"
     },
     tooltips: growthTooltip(
       "The manufacturing PMI surveys whether factory activity is expanding or contracting around the 50 mark.",
@@ -60,7 +64,7 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["New orders", "Prices paid", "Export demand"],
     signalScore: 0.7,
     tone: "positive",
-    releaseCadence: "Monthly, first business day",
+    releaseCadence: "Monthly, first business day at 10:00 AM ET",
     provider: { type: "manual" },
     trendSlope: 0.2,
     volatility: 0.25,
@@ -73,13 +77,15 @@ const blueprints: IndicatorBlueprint[] = [
     shortName: "ISM Services",
     module: "growth",
     dimension: "growth",
-    currentValue: 52.4,
-    priorValue: 52.0,
+    currentValue: 56.1,
+    priorValue: 53.8,
     unit: "index",
+    unitLabel: "Index level",
     frequency: "Monthly",
     source: {
-      name: "ISM survey feed",
-      access: "licensed-manual"
+      name: "ISM Services PMI",
+      url: "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/services/february/",
+      access: "official-free"
     },
     tooltips: growthTooltip(
       "The services PMI tracks whether service-sector activity is expanding or contracting around the 50 line.",
@@ -93,7 +99,7 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Services prices", "Employment subindex", "Consumer spending"],
     signalScore: 0.8,
     tone: "positive",
-    releaseCadence: "Monthly, first week",
+    releaseCadence: "Monthly, third business day at 10:00 AM ET",
     provider: { type: "manual" },
     trendSlope: 0.12,
     volatility: 0.2,
@@ -109,16 +115,17 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 3.1,
     priorValue: 2.8,
     unit: "%",
+    unitLabel: "MoM %",
     frequency: "Monthly",
     source: {
-      name: "Census via FRED",
-      url: "https://fred.stlouisfed.org/series/RSXFS",
+      name: "U.S. Census Retail Trade",
+      url: "https://www.census.gov/retail/",
       access: "official-free"
     },
     tooltips: growthTooltip(
-      "Retail sales measure nominal consumer spending at stores, restaurants, and online merchants.",
-      "Use the control group to judge real consumption momentum. Strong spending supports growth but can also slow the disinflation process if it is too hot.",
-      "Watch revisions, real income, and credit card stress."
+      "This control-group proxy is derived from Census retail categories and excludes autos, gasoline, building materials, and food services.",
+      "Use the month-over-month control-group change to track the cleanest retail input into core consumer spending and GDP tracking.",
+      "Watch revisions, real income, and how the control group flows through GDPNow and real PCE."
     ),
     regimeTag: "consumer resilient",
     summary: "Consumers are still spending enough to keep recession fears in check.",
@@ -127,8 +134,8 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Real disposable income", "Consumer sentiment", "Credit delinquencies"],
     signalScore: 0.6,
     tone: "positive",
-    releaseCadence: "Monthly, mid-month",
-    provider: { type: "fred", seriesId: "RSXFS" },
+    releaseCadence: "Monthly, 8:30 AM ET",
+    provider: { type: "fred" },
     trendSlope: 0.04,
     volatility: 0.06,
     minValue: -8,
@@ -143,10 +150,11 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 1.2,
     priorValue: 0.8,
     unit: "%",
+    unitLabel: "MoM %",
     frequency: "Monthly",
     source: {
-      name: "Fed via FRED",
-      url: "https://fred.stlouisfed.org/series/INDPRO",
+      name: "Federal Reserve G.17",
+      url: "https://www.federalreserve.gov/releases/G17/default.htm",
       access: "official-free"
     },
     tooltips: growthTooltip(
@@ -161,7 +169,7 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Capacity utilization", "Durables ex-defense", "Inventories"],
     signalScore: 0.5,
     tone: "positive",
-    releaseCadence: "Monthly, around the 15th",
+    releaseCadence: "Monthly, 9:15 AM ET",
     provider: { type: "fred", seriesId: "INDPRO" },
     trendSlope: 0.05,
     volatility: 0.04,
@@ -177,14 +185,15 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 1.6,
     priorValue: 1.1,
     unit: "%",
+    unitLabel: "MoM %",
     frequency: "Monthly",
     source: {
-      name: "Census via FRED",
-      url: "https://fred.stlouisfed.org/series/NEWORDER",
+      name: "U.S. Census Durable Goods",
+      url: "https://www.census.gov/manufacturing/m3/",
       access: "official-free"
     },
     tooltips: growthTooltip(
-      "Durable goods orders track business demand for long-lived manufactured items.",
+      "Durable goods orders ex transportation track manufacturers' new orders after stripping out the volatile transportation category.",
       "Use the ex-transportation detail to judge core capex demand. Strong orders can front-run an industrial rebound and better earnings breadth.",
       "Watch core capital goods shipments and regional Fed surveys."
     ),
@@ -195,8 +204,8 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Core capital goods", "Regional surveys", "Corporate confidence"],
     signalScore: 0.4,
     tone: "positive",
-    releaseCadence: "Monthly, late month",
-    provider: { type: "fred", seriesId: "NEWORDER" },
+    releaseCadence: "Monthly, 8:30 AM ET",
+    provider: { type: "fred", seriesId: "ADXTNO" },
     trendSlope: 0.05,
     volatility: 0.08,
     minValue: -12,
@@ -211,10 +220,11 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 1.38,
     priorValue: 1.33,
     unit: "m",
+    unitLabel: "SAAR, millions",
     frequency: "Monthly",
     source: {
-      name: "Census via FRED",
-      url: "https://fred.stlouisfed.org/series/HOUST",
+      name: "U.S. Census / HUD",
+      url: "https://www.census.gov/construction/nrc/",
       access: "official-free"
     },
     tooltips: growthTooltip(
@@ -229,7 +239,7 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Permits", "Mortgage rates", "Builder confidence"],
     signalScore: 0.5,
     tone: "positive",
-    releaseCadence: "Monthly, around the 18th",
+    releaseCadence: "Monthly, 8:30 AM ET",
     provider: { type: "fred", seriesId: "HOUST" },
     trendSlope: 0.01,
     volatility: 0.03,
@@ -245,10 +255,11 @@ const blueprints: IndicatorBlueprint[] = [
     currentValue: 1.44,
     priorValue: 1.4,
     unit: "m",
+    unitLabel: "SAAR, millions",
     frequency: "Monthly",
     source: {
-      name: "Census via FRED",
-      url: "https://fred.stlouisfed.org/series/PERMIT",
+      name: "U.S. Census / HUD",
+      url: "https://www.census.gov/construction/nrc/",
       access: "official-free"
     },
     tooltips: growthTooltip(
@@ -263,7 +274,7 @@ const blueprints: IndicatorBlueprint[] = [
     watchList: ["Mortgage applications", "Builder sentiment", "Starts follow-through"],
     signalScore: 0.4,
     tone: "positive",
-    releaseCadence: "Monthly, around the 18th",
+    releaseCadence: "Monthly, 8:30 AM ET",
     provider: { type: "fred", seriesId: "PERMIT" },
     trendSlope: 0.01,
     volatility: 0.02,

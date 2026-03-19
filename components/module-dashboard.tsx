@@ -14,6 +14,8 @@ export function ModuleDashboard({
 }) {
   const official = indicators.filter((indicator) => indicator.source.access === "official-free").length;
   const manual = indicators.length - official;
+  const live = indicators.filter((indicator) => indicator.dataStatus === "live").length;
+  const fallback = indicators.length - live;
 
   return (
     <div className="space-y-8">
@@ -32,17 +34,26 @@ export function ModuleDashboard({
           <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
             <div className="flex items-center gap-2 text-slate-400">
               <Database className="h-4 w-4" />
-              Official / free feeds
+              Live / fallback
             </div>
-            <p className="mt-3 text-3xl font-semibold text-white">{official}</p>
+            <p className="mt-3 text-3xl font-semibold text-white">
+              {live} / {fallback}
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              {dataMode === "live" ? "Missing syncs are explicitly marked fallback" : "All values are currently fallback"}
+            </p>
           </div>
           <div className="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
             <div className="flex items-center gap-2 text-slate-400">
               <Database className="h-4 w-4" />
-              Licensed / manual feeds
+              Official / manual sources
             </div>
-            <p className="mt-3 text-3xl font-semibold text-white">{manual}</p>
-            <p className="mt-2 text-sm text-slate-500">{dataMode === "live" ? "Backend connected" : "Demo content fallback"}</p>
+            <p className="mt-3 text-3xl font-semibold text-white">
+              {official} / {manual}
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              Source labels and updated dates are shown on every card
+            </p>
           </div>
         </div>
       </section>

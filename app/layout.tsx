@@ -1,20 +1,8 @@
 import type { Metadata } from "next";
-import { Manrope, Space_Grotesk } from "next/font/google";
 
-import { Providers } from "@/app/providers";
 import { SiteShell } from "@/components/site-shell";
 
 import "./globals.css";
-
-const bodyFont = Manrope({
-  subsets: ["latin"],
-  variable: "--font-body"
-});
-
-const headingFont = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-heading"
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://macro-regime-dashboard.vercel.app"),
@@ -29,11 +17,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${bodyFont.variable} ${headingFont.variable}`}>
+    <html lang="en">
       <body>
-        <Providers>
-          <SiteShell>{children}</SiteShell>
-        </Providers>
+        <SiteShell>{children}</SiteShell>
       </body>
     </html>
   );

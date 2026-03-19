@@ -1,7 +1,13 @@
 export type SeriesTransform = "level" | "yoy" | "mom_pct" | "mom_diff";
 
-export type SeriesConfig = {
+export type SeriesInput = {
   seriesId: string;
+  weight?: number;
+};
+
+export type SeriesConfig = {
+  seriesId?: string;
+  inputs?: SeriesInput[];
   transform: SeriesTransform;
   scale?: number;
   limit?: number;
@@ -15,13 +21,23 @@ export const seriesConfigBySlug: Record<string, SeriesConfig> = {
   "financial-conditions-index": { seriesId: "NFCI", transform: "level", limit: 48 },
   "cpi-headline": { seriesId: "CPIAUCSL", transform: "yoy", limit: 48 },
   "core-cpi": { seriesId: "CPILFESL", transform: "yoy", limit: 48 },
-  "ppi-final-demand": { seriesId: "PPIACO", transform: "yoy", limit: 48 },
+  "ppi-final-demand": { seriesId: "PPIFIS", transform: "yoy", limit: 48 },
   "core-pce": { seriesId: "PCEPILFE", transform: "yoy", limit: 48 },
   "avg-hourly-earnings": { seriesId: "CES0500000003", transform: "yoy", limit: 48 },
   "five-year-breakeven": { seriesId: "T5YIE", transform: "level", limit: 48 },
-  "retail-sales": { seriesId: "RSXFS", transform: "mom_pct", limit: 48 },
+  "retail-sales": {
+    inputs: [
+      { seriesId: "RSAFS", weight: 1 },
+      { seriesId: "RSMVPD", weight: -1 },
+      { seriesId: "RSGASS", weight: -1 },
+      { seriesId: "RSBMGESD", weight: -1 },
+      { seriesId: "RSFSDP", weight: -1 }
+    ],
+    transform: "mom_pct",
+    limit: 72
+  },
   "industrial-production": { seriesId: "INDPRO", transform: "mom_pct", limit: 48 },
-  "durable-goods": { seriesId: "NEWORDER", transform: "mom_pct", limit: 48 },
+  "durable-goods": { seriesId: "ADXTNO", transform: "mom_pct", limit: 48 },
   "housing-starts": { seriesId: "HOUST", transform: "level", scale: 0.001, limit: 48 },
   "building-permits": { seriesId: "PERMIT", transform: "level", scale: 0.001, limit: 48 },
   "consumer-sentiment": { seriesId: "UMCSENT", transform: "level", limit: 48 },

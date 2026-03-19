@@ -17,6 +17,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8
     },
     {
+      url: `${baseUrl}/workflow`,
+      changeFrequency: "daily",
+      priority: 0.85
+    },
+    {
       url: `${baseUrl}/playbook`,
       changeFrequency: "daily",
       priority: 0.8

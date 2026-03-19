@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     dataMode: payload.dataMode,
     indicators,
-    modules: payload.modules
+    modules: payload.modules,
+    homepage: payload.homepage
   });
 }

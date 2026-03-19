@@ -3,15 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { ExperienceToggle } from "@/components/experience-toggle";
 import { macroModules } from "@/lib/data/modules";
 import { cn } from "@/lib/utils";
 
+const primaryModuleSlugs = ["inflation", "growth", "labor", "rates-credit"] as const;
+
 const topLinks = [
   { href: "/", label: "Dashboard" },
-  ...macroModules.map((module) => ({ href: `/${module.slug}`, label: module.title })),
-  { href: "/calendar", label: "Calendar" },
-  { href: "/playbook", label: "Playbook" }
+  { href: "/workflow", label: "Workflow" },
+  ...primaryModuleSlugs.map((slug) => {
+    const moduleEntry = macroModules.find((entry) => entry.slug === slug);
+
+    return {
+      href: `/${slug}`,
+      label: moduleEntry?.title ?? slug
+    };
+  }),
+  { href: "/calendar", label: "Calendar" }
 ];
 
 export function TopNav() {
@@ -25,9 +33,8 @@ export function TopNav() {
             <div className="text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-200">
               Macro Signal Deck
             </div>
-            <div className="text-lg font-semibold text-white">Market regime before chart clutter</div>
+            <div className="text-lg font-semibold text-white">Daily macro monitor</div>
           </Link>
-          <ExperienceToggle />
         </div>
         <nav className="flex gap-2 overflow-x-auto pb-1">
           {topLinks.map((link) => {

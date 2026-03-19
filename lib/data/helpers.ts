@@ -1,6 +1,20 @@
+import { getChartHistoryPointTarget } from "@/lib/chart-frequency";
+import { getIndicatorRelease } from "@/lib/release-metadata";
 import type { Frequency, IndicatorTooltip, MacroIndicator } from "@/types/macro";
 
-export type IndicatorBlueprint = Omit<MacroIndicator, "change" | "chartHistory" | "searchTerms"> & {
+export type IndicatorBlueprint = Omit<
+  MacroIndicator,
+  | "change"
+  | "chartHistory"
+  | "searchTerms"
+  | "lastUpdated"
+  | "dataStatus"
+  | "status"
+  | "freshnessStatus"
+  | "release"
+  | "unitLabel"
+> & {
+  unitLabel?: string;
   trendSlope: number;
   volatility: number;
   minValue?: number;
@@ -147,22 +161,6 @@ function formatSeriesDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-function seriesLength(frequency: Frequency) {
-  if (frequency === "Daily" || frequency === "Live") {
-    return 24;
-  }
-
-  if (frequency === "Weekly") {
-    return 20;
-  }
-
-  if (frequency === "Quarterly") {
-    return 10;
-  }
-
-  return 14;
-}
-
 function seedNoise(slug: string, index: number) {
   const seed = Array.from(slug).reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return (((seed + index * 19) % 11) - 5) / 10;
@@ -171,6 +169,10 @@ function seedNoise(slug: string, index: number) {
 function roundValue(value: number, unit: string) {
   if (unit === "k" || unit === "pts" || unit === "bps") {
     return Math.round(value);
+  }
+
+  if (unit === "usd" || unit === "usd/oz") {
+    return Number(value.toFixed(1));
   }
 
   if (unit === "x") {
@@ -184,15 +186,72 @@ function roundValue(value: number, unit: string) {
   return Number(value.toFixed(1));
 }
 
+function inferUnitLabel(unit: string) {
+  if (unit === "%") {
+    return "Percent";
+  }
+
+  if (unit === "bps") {
+    return "bps";
+  }
+
+  if (unit === "index" || unit === "pts") {
+    return "Index level";
+  }
+
+  if (unit === "k") {
+    return "Thousands";
+  }
+
+  if (unit === "m") {
+    return "Millions";
+  }
+
+  if (unit === "$tn") {
+    return "$ trillions";
+  }
+
+  if (unit === "$bn") {
+    return "$ billions";
+  }
+
+  if (unit === "hours") {
+    return "Hours";
+  }
+
+  if (unit === "x") {
+    return "Ratio";
+  }
+
+  if (unit === "usd") {
+    return "Daily close";
+  }
+
+  if (unit === "usd/oz") {
+    return "USD per ounce";
+  }
+
+  return unit;
+}
+
 export function buildIndicators(blueprints: IndicatorBlueprint[]): MacroIndicator[] {
   return blueprints.map((blueprint) => {
-    const count = seriesLength(blueprint.frequency);
+    const count = getChartHistoryPointTarget(blueprint.frequency);
     const points = [];
-    const startValue = blueprint.priorValue - blueprint.trendSlope * (count - 3);
+    const trendWindow =
+      blueprint.frequency === "Daily" || blueprint.frequency === "Live"
+        ? 30
+        : blueprint.frequency === "Weekly"
+          ? 26
+          : blueprint.frequency === "Quarterly"
+            ? 12
+            : 24;
+    const effectiveSlope = blueprint.trendSlope * Math.min(1, trendWindow / count);
+    const startValue = blueprint.priorValue - effectiveSlope * (count - 3);
 
     for (let index = 0; index < count - 2; index += 1) {
       const rawValue =
-        startValue + blueprint.trendSlope * index + seedNoise(blueprint.slug, index) * blueprint.volatility;
+        startValue + effectiveSlope * index + seedNoise(blueprint.slug, index) * blueprint.volatility;
       const value =
         blueprint.minValue !== undefined ? Math.max(blueprint.minValue, rawValue) : rawValue;
 
@@ -215,10 +274,18 @@ export function buildIndicators(blueprints: IndicatorBlueprint[]): MacroIndicato
       value: roundValue(blueprint.currentValue, blueprint.unit)
     });
 
+    const lastObservationDate = points.at(-1)?.date ?? referenceDate.toISOString().slice(0, 10);
+
     return {
       ...blueprint,
       change: Number((blueprint.currentValue - blueprint.priorValue).toFixed(2)),
       chartHistory: points,
+      unitLabel: blueprint.unitLabel ?? inferUnitLabel(blueprint.unit),
+      lastUpdated: `${lastObservationDate}T00:00:00Z`,
+      dataStatus: "fallback",
+      status: "fallback",
+      freshnessStatus: "stale",
+      release: getIndicatorRelease(blueprint.slug, blueprint.frequency, blueprint.releaseCadence),
       searchTerms: [blueprint.name, blueprint.shortName, ...(blueprint.searchTerms ?? [])]
     };
   });
