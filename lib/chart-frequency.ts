@@ -32,8 +32,8 @@ const chartRangeConfig: Record<
   }
 > = {
   daily: {
-    defaultRange: "1M",
-    historyPointTarget: 365 * 5,
+    defaultRange: "3M",
+    historyPointTarget: 365 * 20,
     options: [
       { id: "1M", label: "1M", months: 1 },
       { id: "3M", label: "3M", months: 3 },
@@ -41,12 +41,14 @@ const chartRangeConfig: Record<
       { id: "1Y", label: "1Y", years: 1 },
       { id: "3Y", label: "3Y", years: 3 },
       { id: "5Y", label: "5Y", years: 5 },
+      { id: "10Y", label: "10Y", years: 10 },
+      { id: "20Y", label: "20Y", years: 20 },
       { id: "MAX", label: "MAX", max: true }
     ]
   },
   weekly: {
-    defaultRange: "6M",
-    historyPointTarget: 52 * 10,
+    defaultRange: "1Y",
+    historyPointTarget: 52 * 20,
     options: [
       { id: "3M", label: "3M", months: 3 },
       { id: "6M", label: "6M", months: 6 },
@@ -54,12 +56,13 @@ const chartRangeConfig: Record<
       { id: "3Y", label: "3Y", years: 3 },
       { id: "5Y", label: "5Y", years: 5 },
       { id: "10Y", label: "10Y", years: 10 },
+      { id: "20Y", label: "20Y", years: 20 },
       { id: "MAX", label: "MAX", max: true }
     ]
   },
   monthly: {
-    defaultRange: "1Y",
-    historyPointTarget: 12 * 20,
+    defaultRange: "3Y",
+    historyPointTarget: 12 * 30,
     options: [
       { id: "1Y", label: "1Y", years: 1 },
       { id: "3Y", label: "3Y", years: 3 },
@@ -71,7 +74,7 @@ const chartRangeConfig: Record<
   },
   quarterly: {
     defaultRange: "5Y",
-    historyPointTarget: 4 * 20,
+    historyPointTarget: 4 * 30,
     options: [
       { id: "1Y", label: "1Y", years: 1 },
       { id: "3Y", label: "3Y", years: 3 },
