@@ -246,6 +246,10 @@ export interface RefreshResult {
   dataMode: "demo" | "live";
   refreshed: string[];
   skipped: string[];
+  latestRowsWritten: number;
+  syncStatusRowsWritten: number;
+  refreshRunRowsWritten: number;
+  rowsWritten: number;
 }
 
 export interface IndicatorHealth {

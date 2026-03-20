@@ -138,6 +138,12 @@ function serializeError(error: unknown) {
   return error instanceof Error ? error.message : "Unknown refresh error.";
 }
 
+function throwIfSupabaseError(error: { message: string } | null, context: string) {
+  if (error) {
+    throw new Error(`${context}: ${error.message}`);
+  }
+}
+
 function transformObservation(observations: FredObservation[], index: number, config: SeriesConfig) {
   const scale = config.scale ?? 1;
   const current = observations[index];
@@ -746,6 +752,16 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
     .filter((indicator) => !isInScope(indicator, scope))
     .map((indicator) => indicator.slug);
 
+  console.info(
+    JSON.stringify({
+      event: "supabase_sync_start",
+      scope,
+      started_at: startedAt,
+      indicators_in_scope: inScopeIndicators.length,
+      supabase_write_env: hasSupabaseWriteEnv()
+    })
+  );
+
   if (!hasSupabaseWriteEnv()) {
     return {
       scope,
@@ -753,13 +769,20 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
       completedAt: new Date().toISOString(),
       dataMode: "demo",
       refreshed: [],
-      skipped: inScopeIndicators.map((indicator) => indicator.slug)
+      skipped: inScopeIndicators.map((indicator) => indicator.slug),
+      latestRowsWritten: 0,
+      syncStatusRowsWritten: 0,
+      refreshRunRowsWritten: 0,
+      rowsWritten: 0
     };
   }
 
   const supabase = createSupabaseAdminClient();
   try {
-    const [{ data: latestRows }, { data: syncRows }] = await Promise.all([
+    const [
+      { data: latestRows, error: latestReadError },
+      { data: syncRows, error: syncReadError }
+    ] = await Promise.all([
       supabase
         .from("indicator_latest")
         .select("slug,observed_at,current_value,prior_value,chart_history,source_payload,inserted_at")
@@ -769,6 +792,8 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
         .select("slug,last_successful_fetch,last_failed_fetch,consecutive_failures")
         .returns<ExistingSyncStatusRow[]>()
     ]);
+    throwIfSupabaseError(latestReadError, "Failed to read indicator_latest before refresh");
+    throwIfSupabaseError(syncReadError, "Failed to read indicator_sync_status before refresh");
     const existingLatestMap = new Map((latestRows ?? []).map((row) => [row.slug, row]));
     const existingSyncMap = new Map((syncRows ?? []).map((row) => [row.slug, row]));
     const results = await Promise.all(
@@ -786,20 +811,22 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
     const skipped = [...outOfScope, ...results.filter((result) => result.skipped).map((result) => result.slug)];
 
     if (latestRowsToWrite.length > 0) {
-      await supabase.from("indicator_latest").upsert(latestRowsToWrite, {
+      const { error } = await supabase.from("indicator_latest").upsert(latestRowsToWrite, {
         onConflict: "slug"
       });
+      throwIfSupabaseError(error, "Failed to upsert indicator_latest rows");
     }
 
     if (syncStatusRows.length > 0) {
-      await supabase.from("indicator_sync_status").upsert(syncStatusRows, {
+      const { error } = await supabase.from("indicator_sync_status").upsert(syncStatusRows, {
         onConflict: "slug"
       });
+      throwIfSupabaseError(error, "Failed to upsert indicator_sync_status rows");
     }
 
     const uniqueSkipped = [...new Set(skipped)];
 
-    await supabase.from("refresh_runs").insert({
+    const refreshRunPayload = {
       scope,
       refreshed_count: refreshed.length,
       skipped_count: uniqueSkipped.length,
@@ -812,21 +839,47 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
         errorIndicators: syncStatusRows.filter((row) => row.status === "error").map((row) => row.slug),
         fetchLogs: fetchLogRows
       }
-    });
+    };
+    const { error: refreshRunError } = await supabase.from("refresh_runs").insert(refreshRunPayload);
+    throwIfSupabaseError(refreshRunError, "Failed to insert refresh_runs row");
+
+    const latestRowsWritten = latestRowsToWrite.length;
+    const syncStatusRowsWritten = syncStatusRows.length;
+    const refreshRunRowsWritten = 1;
+    const rowsWritten = latestRowsWritten + syncStatusRowsWritten + refreshRunRowsWritten;
+    const completedAt = new Date().toISOString();
+
+    console.info(
+      JSON.stringify({
+        event: "supabase_sync_complete",
+        scope,
+        completed_at: completedAt,
+        latest_rows_written: latestRowsWritten,
+        sync_status_rows_written: syncStatusRowsWritten,
+        refresh_run_rows_written: refreshRunRowsWritten,
+        total_rows_written: rowsWritten,
+        refreshed_count: refreshed.length,
+        skipped_count: uniqueSkipped.length
+      })
+    );
 
     return {
       scope,
       startedAt,
-      completedAt: new Date().toISOString(),
+      completedAt,
       dataMode: refreshed.length > 0 ? "live" : "demo",
       refreshed,
-      skipped: uniqueSkipped
+      skipped: uniqueSkipped,
+      latestRowsWritten,
+      syncStatusRowsWritten,
+      refreshRunRowsWritten,
+      rowsWritten
     };
   } catch (error) {
     const message = serializeError(error);
 
     try {
-      await supabase.from("refresh_runs").insert({
+      const { error: refreshRunError } = await supabase.from("refresh_runs").insert({
         scope,
         refreshed_count: 0,
         skipped_count: inScopeIndicators.length,
@@ -835,6 +888,7 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
           error: message
         }
       });
+      throwIfSupabaseError(refreshRunError, "Failed to insert failed refresh_runs row");
     } catch {
       // Ignore secondary logging failures so the original refresh error still surfaces.
     }

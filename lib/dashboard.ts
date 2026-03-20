@@ -13,9 +13,10 @@ export const getDashboardPayload = cache(async (): Promise<DashboardPayload> => 
   const snapshot = await loadLiveRuntimeSnapshot();
   const indicators = mergeIndicatorsFromRuntime(snapshot);
   const hasAnyLiveData = indicators.some((indicator) => indicator.status === "live" || indicator.status === "stale-live");
+  const hasAnyStoredRows = snapshot.latestRows.length > 0 || snapshot.syncRows.length > 0;
   const lastUpdated = getRuntimeLastUpdated(snapshot, indicators);
 
-  return buildDashboardPayload(hasAnyLiveData || snapshot.readable ? "live" : "demo", indicators, lastUpdated);
+  return buildDashboardPayload(hasAnyLiveData || hasAnyStoredRows || snapshot.readable ? "live" : "demo", indicators, lastUpdated);
 });
 
 export async function getModulePayload(moduleSlug: MacroModuleSlug) {

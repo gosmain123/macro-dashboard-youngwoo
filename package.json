@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "refresh:macro": "tsx scripts/run-refresh.ts"
+    "refresh:macro": "tsx scripts/run-refresh.ts",
+    "sync:live-data": "tsx scripts/sync-live-data-to-supabase.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
