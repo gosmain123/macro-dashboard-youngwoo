@@ -1,4 +1,5 @@
 import { macroIndicators, macroModules } from "@/lib/data";
+import { normalizeChartHistory } from "@/lib/chart-data";
 import { getIndicatorRelease } from "@/lib/release-metadata";
 import {
   clampMinutesSinceUpdate,
@@ -15,7 +16,7 @@ export interface IndicatorLatestRow {
   observed_at: string | null;
   current_value: number | null;
   prior_value: number | null;
-  chart_history: Array<{ date: string; value: number }> | null;
+  chart_history: Array<{ date: string; value: number; overlay?: number }> | null;
   source_name?: string | null;
   source_url?: string | null;
   provider_type?: string | null;
@@ -191,16 +192,15 @@ export function mergeIndicatorsFromRuntime(snapshot: LiveRuntimeSnapshot, now = 
       indicator.source.url;
     const currentValue = hasLiveCache ? Number(latest?.current_value) : indicator.currentValue;
     const priorValue = hasLiveCache ? Number(latest?.prior_value) : indicator.priorValue;
+    const liveChartHistory = normalizeChartHistory(latest?.chart_history);
+    const fallbackChartHistory = normalizeChartHistory(indicator.chartHistory);
 
     return {
       ...indicator,
       currentValue,
       priorValue,
       change: Number((currentValue - priorValue).toFixed(2)),
-      chartHistory:
-        latest?.chart_history && latest.chart_history.length > 1
-          ? latest.chart_history
-          : indicator.chartHistory,
+      chartHistory: liveChartHistory.length >= 2 ? liveChartHistory : fallbackChartHistory,
       source: {
         ...indicator.source,
         name: sourceName,
@@ -244,9 +244,21 @@ export function buildDataHealthPayload(
       name: indicator.name,
       module: indicator.module,
       provider: indicator.provider.type,
+      sourceFamily: sourceContract?.sourceFamily,
+      refreshBehavior: sourceContract?.refreshBehavior,
+      releaseDataShape: sourceContract?.releaseDataShape,
       primaryProvider: sourceContract?.primary.provider,
       backupProvider: sourceContract?.backup?.provider,
+      sourceStrategy: sourceContract?.sourceStrategy,
       fetchMethod: sourceContract?.primary.fetchMethod,
+      releaseWindowPolicy: sourceContract?.releaseWindowPolicy,
+      liveStatusRule: sourceContract?.liveStatusRule,
+      productTruth: sourceContract?.productTruth,
+      calendarSources: sourceContract?.calendarSources,
+      supportedEventStatuses: sourceContract?.supportedEventStatuses,
+      scheduleChangePolicy: sourceContract?.scheduleChangePolicy,
+      releaseStoragePolicy: sourceContract?.releaseStoragePolicy,
+      workflowStoragePolicy: sourceContract?.workflowStoragePolicy,
       expectedReleaseCadence: sourceContract?.expectedReleaseCadence,
       revisionDetection: sourceContract?.revisionDetection,
       failureHandling: sourceContract?.failureHandling,

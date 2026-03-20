@@ -1,5 +1,6 @@
 import { subDays, subMonths, subQuarters, subWeeks } from "date-fns";
 
+import { normalizeChartHistory } from "@/lib/chart-data";
 import { getChartHistoryPointTarget, getRequiredObservationLimit } from "@/lib/chart-frequency";
 import { macroIndicators } from "@/lib/data";
 import { getIndicatorRelease } from "@/lib/release-metadata";
@@ -27,6 +28,7 @@ type ExistingLatestRow = {
   observed_at: string | null;
   current_value: number | null;
   prior_value: number | null;
+  chart_history?: ChartPoint[] | null;
   source_payload: Record<string, unknown> | null;
   inserted_at: string | null;
 };
@@ -56,13 +58,15 @@ type ResolvedFetchOutcome = {
   sourceEndpoint: IndicatorSourceEndpointContract;
 };
 
-type ObservationWriteRow = {
-  indicator_slug: string;
+type LatestWriteRow = {
+  slug: string;
   observed_at: string;
   current_value: number;
   prior_value: number;
-  change_value: number;
-  chart_history: ChartPoint[] | null;
+  chart_history: ChartPoint[];
+  source_name: string;
+  source_url: string | null;
+  provider_type: string;
   source_payload: Record<string, unknown>;
 };
 
@@ -105,10 +109,12 @@ type AttemptResult = {
   slug: string;
   refreshed: boolean;
   skipped: boolean;
-  observationRow?: ObservationWriteRow;
+  latestRow?: LatestWriteRow;
   syncStatusRow: SyncStatusWriteRow;
   fetchLogRow?: FetchLogWriteRow;
 };
+
+const minimumPreferredHistoryPoints = 8;
 
 function isInScope(indicator: MacroIndicator, scope: RefreshScope) {
   if (scope === "all") {
@@ -255,6 +261,75 @@ function toMinimalChartHistory(indicator: MacroIndicator, observedAt: string, cu
     { date: getPriorPointDate(observedAt, indicator.frequency), value: priorValue },
     { date: observedAt, value: currentValue }
   ];
+}
+
+function hasRichHistory(history: ChartPoint[]) {
+  return history.length >= minimumPreferredHistoryPoints;
+}
+
+async function resolveChartHistory(
+  indicator: MacroIndicator,
+  sourceContract: IndicatorSourceContract,
+  outcome: FetchOutcome
+) {
+  const normalizedPrimary = normalizeChartHistory(outcome.chartHistory);
+
+  if (hasRichHistory(normalizedPrimary)) {
+    return {
+      chartHistory: normalizedPrimary,
+      parseStatus: outcome.parseStatus
+    };
+  }
+
+  if (sourceContract.backup?.provider === "fred-backup") {
+    try {
+      const backupOutcome = await fetchFredOutcome(indicator, {
+        sourceName: sourceContract.backup.sourceName,
+        sourceUrl: sourceContract.backup.sourceUrl,
+        parseStatus: "parsed-via-fred-history-backfill"
+      });
+      const backupHistory = normalizeChartHistory(backupOutcome.chartHistory);
+
+      if (backupHistory.length >= 2) {
+        return {
+          chartHistory: backupHistory,
+          parseStatus:
+            backupHistory.length >= minimumPreferredHistoryPoints
+              ? `${outcome.parseStatus}|fred-history-backfill`
+              : `${outcome.parseStatus}|fred-short-history`
+        };
+      }
+    } catch (error) {
+      console.warn(
+        JSON.stringify({
+          event: "indicator_history_backfill_failed",
+          indicator_slug: indicator.slug,
+          provider: sourceContract.backup.provider,
+          error: serializeError(error)
+        })
+      );
+    }
+  }
+
+  const seedHistory = normalizeChartHistory(indicator.chartHistory);
+
+  if (seedHistory.length >= 2) {
+    return {
+      chartHistory: seedHistory,
+      parseStatus: `${outcome.parseStatus}|seed-history-backfill`
+    };
+  }
+
+  return {
+    chartHistory:
+      normalizedPrimary.length >= 2
+        ? normalizedPrimary
+        : toMinimalChartHistory(indicator, outcome.observedAt, outcome.currentValue, outcome.priorValue),
+    parseStatus:
+      normalizedPrimary.length >= 2
+        ? `${outcome.parseStatus}|minimal-live-history`
+        : `${outcome.parseStatus}|minimal-history`
+  };
 }
 
 function toProviderOutcome(
@@ -434,37 +509,6 @@ async function resolveFetchOutcome(indicator: MacroIndicator): Promise<ResolvedF
   }
 }
 
-function buildDefinitionRows(indicators: MacroIndicator[]) {
-  return indicators.map((indicator) => {
-    const sourceContract = getIndicatorSourceContract(indicator);
-
-    return {
-      slug: indicator.slug,
-      name: indicator.name,
-      short_name: indicator.shortName,
-      module: indicator.module,
-      dimension: indicator.dimension,
-      unit: indicator.unit,
-      frequency: indicator.frequency,
-      source_name: sourceContract?.primary.sourceName ?? indicator.source.name,
-      source_url: sourceContract?.primary.sourceUrl ?? indicator.source.url ?? null,
-      source_access: indicator.source.access,
-      tooltips: indicator.tooltips,
-      regime_tag: indicator.regimeTag,
-      summary: indicator.summary,
-      advanced_summary: indicator.advancedSummary,
-      watch_list: indicator.watchList,
-      signal_score: indicator.signalScore,
-      tone: indicator.tone,
-      overlays: indicator.overlays ?? [],
-      release_cadence: indicator.releaseCadence,
-      search_terms: indicator.searchTerms,
-      provider_type: sourceContract?.primary.provider ?? indicator.provider.type,
-      provider_series_id: indicator.provider.seriesId ?? null
-    };
-  });
-}
-
 function logFetch(result: FetchLogWriteRow, fallbackUsageReason?: string | null) {
   console.info(
     JSON.stringify({
@@ -542,6 +586,7 @@ async function runAttempt(
     const completedIso = completedAt.toISOString();
     const durationMs = completedAt.getTime() - startedAt.getTime();
     const outcome = value.outcome;
+    const historyResolution = await resolveChartHistory(indicator, value.sourceContract, outcome);
     const sourcePayload = {
       provider_type: value.providerType,
       source_name: outcome.sourceName,
@@ -551,19 +596,34 @@ async function runAttempt(
       next_release_at: release.nextReleaseDate ? `${release.nextReleaseDate}T12:00:00Z` : null,
       status: "live",
       freshness_age_minutes: 0,
-      parse_status: outcome.parseStatus,
+      parse_status: historyResolution.parseStatus,
       items_fetched: outcome.itemsFetched,
       last_successful_fetch: completedIso,
       last_failed_fetch: null,
       error_message: null,
       fallback_usage_reason: null,
+      chart_history_points: historyResolution.chartHistory.length,
       source_contract: {
+        source_family: value.sourceContract.sourceFamily,
+        refresh_behavior: value.sourceContract.refreshBehavior,
+        release_data_shape: value.sourceContract.releaseDataShape,
+        source_strategy: value.sourceContract.sourceStrategy,
+        release_window_policy: value.sourceContract.releaseWindowPolicy,
+        live_status_rule: value.sourceContract.liveStatusRule,
+        product_truth: value.sourceContract.productTruth,
+        calendar_sources: value.sourceContract.calendarSources,
+        supported_event_statuses: value.sourceContract.supportedEventStatuses,
+        schedule_change_policy: value.sourceContract.scheduleChangePolicy,
+        release_storage_policy: value.sourceContract.releaseStoragePolicy,
+        workflow_storage_policy: value.sourceContract.workflowStoragePolicy,
         primary_provider: value.sourceContract.primary.provider,
         backup_provider: value.sourceContract.backup?.provider ?? null,
         fetch_method: value.sourceEndpoint.fetchMethod,
+        update_cadence: value.sourceContract.updateCadence,
         expected_release_cadence: value.sourceContract.expectedReleaseCadence,
         revision_detection: value.sourceContract.revisionDetection,
-        failure_handling: value.sourceContract.failureHandling
+        failure_handling: value.sourceContract.failureHandling,
+        ui_status_labeling: value.sourceContract.uiStatusLabeling
       }
     } satisfies Record<string, unknown>;
     const fetchLogRow: FetchLogWriteRow = {
@@ -577,7 +637,7 @@ async function runAttempt(
       duration_ms: durationMs,
       success: true,
       items_fetched: outcome.itemsFetched,
-      parse_status: outcome.parseStatus,
+      parse_status: historyResolution.parseStatus,
       attempt_count: attemptsUsed,
       error_message: null
     };
@@ -588,13 +648,15 @@ async function runAttempt(
       slug: indicator.slug,
       refreshed: true,
       skipped: false,
-      observationRow: {
-        indicator_slug: indicator.slug,
+      latestRow: {
+        slug: indicator.slug,
         observed_at: outcome.observedAt,
         current_value: outcome.currentValue,
         prior_value: outcome.priorValue,
-        change_value: round(outcome.currentValue - outcome.priorValue),
-        chart_history: outcome.chartHistory ?? null,
+        chart_history: historyResolution.chartHistory,
+        source_name: outcome.sourceName,
+        source_url: outcome.sourceUrl ?? null,
+        provider_type: value.providerType,
         source_payload: sourcePayload
       },
       syncStatusRow: {
@@ -609,7 +671,7 @@ async function runAttempt(
         last_failed_fetch: null,
         last_duration_ms: durationMs,
         last_items_fetched: outcome.itemsFetched,
-        last_parse_status: outcome.parseStatus,
+        last_parse_status: historyResolution.parseStatus,
         last_error: null,
         fallback_usage_reason: null,
         consecutive_failures: 0,
@@ -696,75 +758,87 @@ export async function refreshIndicators(scope: RefreshScope = "all"): Promise<Re
   }
 
   const supabase = createSupabaseAdminClient();
+  try {
+    const [{ data: latestRows }, { data: syncRows }] = await Promise.all([
+      supabase
+        .from("indicator_latest")
+        .select("slug,observed_at,current_value,prior_value,chart_history,source_payload,inserted_at")
+        .returns<ExistingLatestRow[]>(),
+      supabase
+        .from("indicator_sync_status")
+        .select("slug,last_successful_fetch,last_failed_fetch,consecutive_failures")
+        .returns<ExistingSyncStatusRow[]>()
+    ]);
+    const existingLatestMap = new Map((latestRows ?? []).map((row) => [row.slug, row]));
+    const existingSyncMap = new Map((syncRows ?? []).map((row) => [row.slug, row]));
+    const results = await Promise.all(
+      inScopeIndicators.map((indicator) => runAttempt(indicator, existingLatestMap, existingSyncMap))
+    );
 
-  await supabase.from("indicator_definitions").upsert(buildDefinitionRows(macroIndicators), {
-    onConflict: "slug"
-  });
+    const latestRowsToWrite = results
+      .map((result) => result.latestRow)
+      .filter((row): row is LatestWriteRow => Boolean(row));
+    const syncStatusRows = results.map((result) => result.syncStatusRow);
+    const fetchLogRows = results
+      .map((result) => result.fetchLogRow)
+      .filter((row): row is FetchLogWriteRow => Boolean(row));
+    const refreshed = results.filter((result) => result.refreshed).map((result) => result.slug);
+    const skipped = [...outOfScope, ...results.filter((result) => result.skipped).map((result) => result.slug)];
 
-  const [{ data: latestRows }, { data: syncRows }] = await Promise.all([
-    supabase
-      .from("indicator_latest")
-      .select("slug,observed_at,current_value,prior_value,source_payload,inserted_at")
-      .returns<ExistingLatestRow[]>(),
-    supabase
-      .from("indicator_sync_status")
-      .select("slug,last_successful_fetch,last_failed_fetch,consecutive_failures")
-      .returns<ExistingSyncStatusRow[]>()
-  ]);
-  const existingLatestMap = new Map((latestRows ?? []).map((row) => [row.slug, row]));
-  const existingSyncMap = new Map((syncRows ?? []).map((row) => [row.slug, row]));
-  const results = await Promise.all(
-    inScopeIndicators.map((indicator) => runAttempt(indicator, existingLatestMap, existingSyncMap))
-  );
-
-  const observationRows = results
-    .map((result) => result.observationRow)
-    .filter((row): row is ObservationWriteRow => Boolean(row));
-  const syncStatusRows = results.map((result) => result.syncStatusRow);
-  const fetchLogRows = results
-    .map((result) => result.fetchLogRow)
-    .filter((row): row is FetchLogWriteRow => Boolean(row));
-  const refreshed = results.filter((result) => result.refreshed).map((result) => result.slug);
-  const skipped = [...outOfScope, ...results.filter((result) => result.skipped).map((result) => result.slug)];
-
-  if (observationRows.length > 0) {
-    await supabase.from("indicator_observations").upsert(observationRows, {
-      onConflict: "indicator_slug,observed_at"
-    });
-  }
-
-  if (syncStatusRows.length > 0) {
-    await supabase.from("indicator_sync_status").upsert(syncStatusRows, {
-      onConflict: "slug"
-    });
-  }
-
-  if (fetchLogRows.length > 0) {
-    await supabase.from("indicator_fetch_logs").insert(fetchLogRows);
-  }
-
-  const uniqueSkipped = [...new Set(skipped)];
-
-  await supabase.from("refresh_runs").insert({
-    scope,
-    refreshed_count: refreshed.length,
-    skipped_count: uniqueSkipped.length,
-    status: "completed",
-    payload: {
-      refreshed,
-      skipped: uniqueSkipped,
-      liveIndicators: refreshed,
-      staleIndicators: syncStatusRows.filter((row) => row.status === "stale-live").map((row) => row.slug),
-      errorIndicators: syncStatusRows.filter((row) => row.status === "error").map((row) => row.slug)
+    if (latestRowsToWrite.length > 0) {
+      await supabase.from("indicator_latest").upsert(latestRowsToWrite, {
+        onConflict: "slug"
+      });
     }
-  });
 
-  return {
-    scope,
-    startedAt,
-    completedAt: new Date().toISOString(),
-    dataMode: refreshed.length > 0 ? "live" : "demo",
-    refreshed,
-    skipped: uniqueSkipped
-  };
+    if (syncStatusRows.length > 0) {
+      await supabase.from("indicator_sync_status").upsert(syncStatusRows, {
+        onConflict: "slug"
+      });
+    }
+
+    const uniqueSkipped = [...new Set(skipped)];
+
+    await supabase.from("refresh_runs").insert({
+      scope,
+      refreshed_count: refreshed.length,
+      skipped_count: uniqueSkipped.length,
+      status: "completed",
+      payload: {
+        refreshed,
+        skipped: uniqueSkipped,
+        liveIndicators: refreshed,
+        staleIndicators: syncStatusRows.filter((row) => row.status === "stale-live").map((row) => row.slug),
+        errorIndicators: syncStatusRows.filter((row) => row.status === "error").map((row) => row.slug),
+        fetchLogs: fetchLogRows
+      }
+    });
+
+    return {
+      scope,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      dataMode: refreshed.length > 0 ? "live" : "demo",
+      refreshed,
+      skipped: uniqueSkipped
+    };
+  } catch (error) {
+    const message = serializeError(error);
+
+    try {
+      await supabase.from("refresh_runs").insert({
+        scope,
+        refreshed_count: 0,
+        skipped_count: inScopeIndicators.length,
+        status: "failed",
+        payload: {
+          error: message
+        }
+      });
+    } catch {
+      // Ignore secondary logging failures so the original refresh error still surfaces.
+    }
+
+    throw error;
+  }
 }

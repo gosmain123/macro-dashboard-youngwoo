@@ -24,6 +24,29 @@ export type IndicatorTone = "positive" | "negative" | "neutral";
 export type RefreshScope = "market" | "daily" | "all";
 export type IndicatorSourceType = "official" | "derived" | "market-implied" | "manual";
 export type HistoricalContextBand = "low" | "normal" | "elevated" | "extreme";
+export type IndicatorSourceFamily =
+  | "bls-inflation-labor-release-family"
+  | "bea-growth-income-family"
+  | "census-growth-housing-family"
+  | "ism-survey-family"
+  | "fed-policy-calendar-family"
+  | "federal-reserve-release-family"
+  | "dol-weekly-claims-family"
+  | "treasury-rates-family"
+  | "derived-backup-series-family"
+  | "manual-seed-family";
+export type IndicatorRefreshBehavior =
+  | "release-driven-series"
+  | "daily-official-snapshot"
+  | "event-schedule-metadata"
+  | "derived-series-snapshot"
+  | "manual-seed-only";
+export type IndicatorReleaseDataShape =
+  | "numeric-release"
+  | "event-metadata"
+  | "daily-snapshot"
+  | "derived-series"
+  | "manual-seed";
 
 export type ProviderType =
   | "bea"
@@ -230,9 +253,26 @@ export interface IndicatorHealth {
   name: string;
   module: MacroModuleSlug;
   provider: ProviderType;
+  sourceFamily?: IndicatorSourceFamily;
+  refreshBehavior?: IndicatorRefreshBehavior;
+  releaseDataShape?: IndicatorReleaseDataShape;
   primaryProvider?: ProviderType;
   backupProvider?: ProviderType;
+  sourceStrategy?: string;
   fetchMethod?: string;
+  releaseWindowPolicy?: string;
+  liveStatusRule?: string;
+  productTruth?: string;
+  calendarSources?: Array<{
+    kind: string;
+    sourceName: string;
+    sourceUrl?: string;
+    note?: string;
+  }>;
+  supportedEventStatuses?: CalendarEventStatus[];
+  scheduleChangePolicy?: string;
+  releaseStoragePolicy?: string;
+  workflowStoragePolicy?: string;
   expectedReleaseCadence?: string;
   revisionDetection?: string;
   failureHandling?: string;
