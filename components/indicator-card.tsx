@@ -33,16 +33,10 @@ function valueTone(indicator: MacroIndicator) {
 }
 
 export function IndicatorCard({
-  indicator,
-  visibleSlugs = [indicator.slug]
+  indicator
 }: {
   indicator: MacroIndicator;
-  visibleSlugs?: string[];
 }) {
-  const safeVisibleSlugs =
-    Array.isArray(visibleSlugs) && visibleSlugs.length > 0
-      ? visibleSlugs.filter((slug): slug is string => typeof slug === "string" && slug.length > 0)
-      : [indicator.slug];
   const safeSummary = indicator.summary?.trim() || indicator.advancedSummary?.trim() || "Summary unavailable.";
   const safeChartHistory = Array.isArray(indicator.chartHistory) ? indicator.chartHistory : [];
 
@@ -91,7 +85,7 @@ export function IndicatorCard({
 
       <div className="mt-auto pt-3">
         <WidgetErrorBoundary compact title="Details unavailable" description="The headline card stays available even if the detail drawer cannot open.">
-          <IndicatorTooltip indicator={indicator} visibleSlugs={safeVisibleSlugs} trigger="button" />
+          <IndicatorTooltip indicator={indicator} trigger="button" />
         </WidgetErrorBoundary>
       </div>
     </article>

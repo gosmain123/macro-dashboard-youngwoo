@@ -2,10 +2,10 @@
 
 import { CalendarClock, ExternalLink, Info, MoveUpRight, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { FollowUpLogicCard } from "@/components/follow-up-logic-card";
 import { IndicatorActionLinks } from "@/components/indicator-action-links";
-import { IndicatorWorkspaceActions } from "@/components/indicator-workspace-actions";
 import { MetaChip } from "@/components/meta-chip";
 import { SparklineChart } from "@/components/sparkline-chart";
 import { getHistoricalContext, getIndicatorSourceType } from "@/lib/indicator-insight";
@@ -52,25 +52,20 @@ function contextTone(context: ReturnType<typeof getHistoricalContext>) {
 
 export function IndicatorTooltip({
   indicator,
-  visibleSlugs = [indicator.slug],
   trigger = "icon"
 }: {
   indicator: MacroIndicator;
-  visibleSlugs?: string[];
   trigger?: "icon" | "button";
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [supportsHover, setSupportsHover] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previewId = useId();
   const drawerTitleId = useId();
-  const safeVisibleSlugs =
-    Array.isArray(visibleSlugs) && visibleSlugs.length > 0
-      ? visibleSlugs.filter((slug): slug is string => typeof slug === "string" && slug.length > 0)
-      : [indicator.slug];
   const safeTooltips = {
     definition: indicator.tooltips?.definition?.trim() || "Definition unavailable.",
     whyItMatters: indicator.tooltips?.whyItMatters?.trim() || "Why it matters is unavailable.",
@@ -90,6 +85,12 @@ export function IndicatorTooltip({
       : indicator.release?.type === "scheduled"
         ? formatReleaseLabel(indicator.release.nextReleaseDate, indicator.release.timeLabel)
         : indicator.release?.detail ?? "Schedule pending";
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      setPortalReady(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -246,33 +247,35 @@ export function IndicatorTooltip({
         </div>
       </div>
 
-      <div
-        className={cn(
-          "fixed inset-0 z-50 transition",
-          drawerOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-        )}
-        aria-hidden={!drawerOpen}
-      >
-        <button
-          type="button"
-          aria-label={`Close ${indicator.name} details`}
-          onClick={closeDrawer}
-          className={cn(
-            "absolute inset-0 bg-[color:var(--overlay)] backdrop-blur-md transition",
-            drawerOpen ? "opacity-100" : "opacity-0"
-          )}
-        />
+      {portalReady
+        ? createPortal(
+            <div
+              className={cn(
+                "fixed inset-0 z-[120] transition",
+                drawerOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+              )}
+              aria-hidden={!drawerOpen}
+            >
+              <button
+                type="button"
+                aria-label={`Close ${indicator.name} details`}
+                onClick={closeDrawer}
+                className={cn(
+                  "absolute inset-0 bg-[color:var(--overlay)] backdrop-blur-md transition",
+                  drawerOpen ? "opacity-100" : "opacity-0"
+                )}
+              />
 
-        <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={drawerTitleId}
-            className={cn(
-              "surface-strong relative z-10 flex max-h-[min(88vh,58rem)] w-full max-w-[64rem] min-w-0 flex-col overflow-hidden rounded-[30px] transition duration-200",
-              drawerOpen ? "translate-y-0 scale-100" : "translate-y-6 scale-[0.98]"
-            )}
-          >
+              <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+                <aside
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby={drawerTitleId}
+                  className={cn(
+                    "surface-strong relative z-10 flex max-h-[min(92vh,62rem)] w-full max-w-[72rem] min-w-0 flex-col overflow-hidden rounded-[30px] border border-[color:var(--border-soft)] shadow-[0_28px_80px_rgba(15,23,42,0.18)] transition duration-200",
+                    drawerOpen ? "translate-y-0 scale-100" : "translate-y-6 scale-[0.98]"
+                  )}
+                >
             <div className="border-b border-[color:var(--border-soft)] px-6 py-5 sm:px-7">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -300,7 +303,7 @@ export function IndicatorTooltip({
               </div>
             </div>
 
-            <div className="max-h-[calc(88vh-6rem)] overflow-y-auto px-6 py-6 sm:px-7">
+            <div className="max-h-[calc(92vh-6rem)] overflow-y-auto px-6 py-6 sm:px-7">
               <div className="space-y-[18px]">
                 <section className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                   <div className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
@@ -408,18 +411,14 @@ export function IndicatorTooltip({
                     <IndicatorActionLinks indicator={indicator} layout="panel" />
                   </div>
                 </section>
-
-                <section className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Workspace actions</p>
-                  <div className="mt-4">
-                    <IndicatorWorkspaceActions slug={indicator.slug} name={indicator.name} visibleSlugs={safeVisibleSlugs} />
-                  </div>
-                </section>
               </div>
             </div>
-          </aside>
-        </div>
-      </div>
+                </aside>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </>
   );
 }

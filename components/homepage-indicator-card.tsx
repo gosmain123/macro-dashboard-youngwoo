@@ -4,6 +4,7 @@ import { MetaChip } from "@/components/meta-chip";
 import { IndicatorActionLinks } from "@/components/indicator-action-links";
 import { IndicatorTooltip } from "@/components/indicator-tooltip";
 import { SparklineChart } from "@/components/sparkline-chart";
+import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import { cn, formatIndicatorValue } from "@/lib/utils";
 import type { HomepageIndicator } from "@/types/macro";
 
@@ -32,6 +33,9 @@ function valueTone(indicator: HomepageIndicator) {
 }
 
 export function HomepageIndicatorCard({ indicator }: { indicator: HomepageIndicator }) {
+  const safeSummary = indicator.summary?.trim() || indicator.advancedSummary?.trim() || "Summary unavailable.";
+  const safeChartHistory = Array.isArray(indicator.chartHistory) ? indicator.chartHistory : [];
+
   return (
     <article
       id={indicator.slug}
@@ -54,25 +58,31 @@ export function HomepageIndicatorCard({ indicator }: { indicator: HomepageIndica
       </div>
 
       <p className="mt-3 min-h-[2.75rem] text-sm leading-6 text-[color:var(--text-secondary)] line-clamp-2">
-        {indicator.summary}
+        {safeSummary}
       </p>
 
       <div className="surface-inset mt-4 overflow-hidden rounded-[20px] px-3 py-2">
-        <SparklineChart
-          data={indicator.chartHistory}
-          frequency={indicator.frequency}
-          unit={indicator.unit}
-          showOverlay={Boolean(indicator.overlays?.length)}
-          variant="compact"
-        />
+        <WidgetErrorBoundary compact title="Chart unavailable" description="This card is still usable without the mini chart.">
+          <SparklineChart
+            data={safeChartHistory}
+            frequency={indicator.frequency}
+            unit={indicator.unit}
+            showOverlay={Boolean(indicator.overlays?.length)}
+            variant="compact"
+          />
+        </WidgetErrorBoundary>
       </div>
 
       <div className="mt-3">
-        <IndicatorActionLinks indicator={indicator} />
+        <WidgetErrorBoundary compact title="Links unavailable" description="The summary card still renders without the quick links.">
+          <IndicatorActionLinks indicator={indicator} />
+        </WidgetErrorBoundary>
       </div>
 
       <div className="mt-auto pt-3">
-        <IndicatorTooltip indicator={indicator} trigger="button" />
+        <WidgetErrorBoundary compact title="Details unavailable" description="The summary card stays available even if the detail modal fails.">
+          <IndicatorTooltip indicator={indicator} trigger="button" />
+        </WidgetErrorBoundary>
       </div>
     </article>
   );

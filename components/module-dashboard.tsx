@@ -3,8 +3,7 @@
 import { BarChart3, Database } from "lucide-react";
 
 import { IndicatorCard } from "@/components/indicator-card";
-import { WorkspaceToolbar } from "@/components/workspace-toolbar";
-import { useWorkspace } from "@/components/workspace-provider";
+import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import type { MacroIndicator, MacroModule } from "@/types/macro";
 
 export function ModuleDashboard({
@@ -16,8 +15,7 @@ export function ModuleDashboard({
   indicators: MacroIndicator[];
   dataMode: "demo" | "live";
 }) {
-  const { applyIndicatorPreferences } = useWorkspace();
-  const visibleIndicators = applyIndicatorPreferences(indicators);
+  const visibleIndicators = Array.isArray(indicators) ? indicators : [];
   const official = visibleIndicators.filter((indicator) => indicator.source.access === "official-free").length;
   const live = visibleIndicators.filter((indicator) => indicator.dataStatus === "live").length;
   const staleLive = visibleIndicators.filter((indicator) => indicator.dataStatus === "stale-live").length;
@@ -68,11 +66,15 @@ export function ModuleDashboard({
         </div>
       </section>
 
-      <WorkspaceToolbar />
-
       <section className="grid auto-rows-fr gap-4 xl:grid-cols-2">
         {visibleIndicators.map((indicator) => (
-          <IndicatorCard key={indicator.slug} indicator={indicator} visibleSlugs={visibleIndicators.map((entry) => entry.slug)} />
+          <WidgetErrorBoundary
+            key={indicator.slug}
+            title={`${indicator.name} is temporarily unavailable`}
+            description="One broken card should not take down the rest of the module."
+          >
+            <IndicatorCard indicator={indicator} />
+          </WidgetErrorBoundary>
         ))}
       </section>
     </div>

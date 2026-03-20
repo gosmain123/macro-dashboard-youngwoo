@@ -82,7 +82,7 @@ export function IndicatorActionLinks({
               ))}
             </div>
           ) : (
-            <p className="mt-3 text-sm leading-6 text-slate-500">No direct related jump is pinned yet.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-500">No direct related jump is available yet.</p>
           )}
         </div>
 

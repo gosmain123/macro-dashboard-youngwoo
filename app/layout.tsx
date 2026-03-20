@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 
-import { ClientErrorBoundary } from "@/components/client-error-boundary";
-import { WorkspaceProvider } from "@/components/workspace-provider";
-import { SiteShell } from "@/components/site-shell";
+import { SiteShellFrame } from "@/components/site-shell-frame";
 
 import "./globals.css";
 
@@ -21,11 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <WorkspaceProvider>
-          <ClientErrorBoundary>
-            <SiteShell>{children}</SiteShell>
-          </ClientErrorBoundary>
-        </WorkspaceProvider>
+        <SiteShellFrame>{children}</SiteShellFrame>
       </body>
     </html>
   );

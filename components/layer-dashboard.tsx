@@ -3,9 +3,7 @@
 import { AlertTriangle, BarChart3, Database } from "lucide-react";
 
 import { IndicatorCard } from "@/components/indicator-card";
-import { WorkspaceToolbar } from "@/components/workspace-toolbar";
 import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
-import { useWorkspace } from "@/components/workspace-provider";
 import type { LayerPagePayload } from "@/lib/layer-pages";
 
 export function LayerDashboard({
@@ -15,7 +13,6 @@ export function LayerDashboard({
   page: LayerPagePayload;
   dataMode: "demo" | "live";
 }) {
-  const { applyIndicatorPreferences } = useWorkspace();
   const safePage = {
     ...page,
     indicators: Array.isArray(page?.indicators) ? page.indicators : [],
@@ -23,11 +20,11 @@ export function LayerDashboard({
     workflow: Array.isArray(page?.workflow) ? page.workflow : [],
     cautions: Array.isArray(page?.cautions) ? page.cautions : []
   };
-  const visibleIndicators = applyIndicatorPreferences(safePage.indicators);
+  const visibleIndicators = safePage.indicators;
   const visibleSections = safePage.sections
     .map((section) => ({
       ...section,
-      indicators: applyIndicatorPreferences(Array.isArray(section.indicators) ? section.indicators : [])
+      indicators: Array.isArray(section.indicators) ? section.indicators : []
     }))
     .filter((section) => section.indicators.length > 0);
 
@@ -119,10 +116,6 @@ export function LayerDashboard({
         </details>
       </section>
 
-      <WidgetErrorBoundary title="Workspace unavailable" description="Personalization controls failed to load, but the page content is still available.">
-        <WorkspaceToolbar />
-      </WidgetErrorBoundary>
-
       {visibleSections.length === 0 ? (
         <section className="surface-card rounded-[28px] p-5 md:p-6">
           <p className="section-kicker">Fallback</p>
@@ -150,7 +143,6 @@ export function LayerDashboard({
               >
                 <IndicatorCard
                   indicator={indicator}
-                  visibleSlugs={section.indicators.map((entry) => entry.slug)}
                 />
               </WidgetErrorBoundary>
             ))}

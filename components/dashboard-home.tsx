@@ -5,20 +5,22 @@ import { ArrowRight, CalendarClock, Clock3, TrendingUp } from "lucide-react";
 
 import { HomepageIndicatorCard } from "@/components/homepage-indicator-card";
 import { MetaChip } from "@/components/meta-chip";
-import { useWorkspace } from "@/components/workspace-provider";
+import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import { formatCalendarDate, formatChange, formatFreshnessAge, formatIndicatorValue, formatTimestamp } from "@/lib/utils";
 import type { DashboardPayload, FreshnessStatus, HomepageIndicator } from "@/types/macro";
 
 function getStatusMeta(payload: DashboardPayload, freshnessStatus: FreshnessStatus) {
+  const homepageFreshness = payload.homepage?.freshness;
+
   if (payload.dataMode === "demo") {
     return { label: "Fallback", tone: "amber" as const };
   }
 
-  if (payload.homepage.freshness.errorCount > 0) {
+  if ((homepageFreshness?.errorCount ?? 0) > 0) {
     return { label: "Degraded", tone: "rose" as const };
   }
 
-  if (payload.homepage.freshness.fallbackCount > 0 || payload.homepage.freshness.staleLiveCount > 0) {
+  if ((homepageFreshness?.fallbackCount ?? 0) > 0 || (homepageFreshness?.staleLiveCount ?? 0) > 0) {
     return { label: "Mixed", tone: "amber" as const };
   }
 
@@ -50,19 +52,37 @@ function changeTone(indicator: HomepageIndicator) {
 }
 
 export function DashboardHome({ payload }: { payload: DashboardPayload }) {
-  const { freshness, keyEvents, watchlist } = payload.homepage;
-  const { applyIndicatorPreferences, watchlistSlugs } = useWorkspace();
-  const orderedIndicators = applyIndicatorPreferences(payload.indicators);
-  const personalizedWatchlist =
-    watchlistSlugs.length > 0
-      ? watchlistSlugs
-          .map((slug) => orderedIndicators.find((indicator) => indicator.slug === slug))
-          .filter((indicator): indicator is HomepageIndicator => Boolean(indicator))
-      : applyIndicatorPreferences(watchlist);
-  const keySignals = (personalizedWatchlist.length > 0 ? personalizedWatchlist : applyIndicatorPreferences(watchlist)).slice(0, 4);
+  const regimeSnapshot = payload.regimeSnapshot ?? {
+    title: "Macro read unavailable",
+    summary: "Summary unavailable."
+  };
+  const homepage = payload.homepage ?? {
+    watchlist: [],
+    keyEvents: [],
+    freshness: {
+      lastUpdated: new Date().toISOString(),
+      refreshCadence: "Auto-refresh every 10 min",
+      freshnessStatus: "stale" as const,
+      staleAfterMinutes: 0,
+      minutesSinceUpdate: 0,
+      officialCount: 0,
+      manualCount: 0,
+      liveCount: 0,
+      staleLiveCount: 0,
+      fallbackCount: 0,
+      errorCount: 0
+    }
+  };
+  const freshness = homepage.freshness;
+  const keyEvents = Array.isArray(homepage.keyEvents) ? homepage.keyEvents : [];
+  const watchlist = Array.isArray(homepage.watchlist) ? homepage.watchlist : [];
+  const orderedIndicators = (Array.isArray(payload.indicators) ? payload.indicators : []).filter(
+    (indicator): indicator is HomepageIndicator => Boolean(indicator && typeof indicator.slug === "string")
+  );
+  const keySignals = watchlist.slice(0, 4);
   const changeLeaders = orderedIndicators
     .slice()
-    .sort((left, right) => Math.abs(right.change) - Math.abs(left.change))
+    .sort((left, right) => Math.abs(Number(right.change) || 0) - Math.abs(Number(left.change) || 0))
     .slice(0, 4);
   const nextCatalyst = keyEvents[0];
   const statusMeta = getStatusMeta(payload, freshness.freshnessStatus);
@@ -93,15 +113,16 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
 
   return (
     <div className="min-w-0 space-y-6">
-      <section className="surface-card overflow-hidden rounded-[32px] p-6 md:p-8">
+      <WidgetErrorBoundary title="Macro summary unavailable" description="The rest of the dashboard is still available.">
+        <section className="surface-card overflow-hidden rounded-[32px] p-6 md:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 max-w-4xl">
             <p className="section-kicker">Macro summary</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[color:var(--text-primary)] md:text-4xl">
-              {payload.regimeSnapshot.title}
+              {regimeSnapshot.title}
             </h1>
             <p className="mt-3 text-base leading-7 text-[color:var(--text-secondary)]">
-              {firstSentence(payload.regimeSnapshot.summary)}
+              {firstSentence(regimeSnapshot.summary)}
             </p>
           </div>
 
@@ -111,9 +132,11 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
             {nextCatalyst ? <MetaChip label="Next" value={nextCatalyst.title} tone="slate" className="max-w-[18rem]" /> : null}
           </div>
         </div>
-      </section>
+        </section>
+      </WidgetErrorBoundary>
 
-      <section className="space-y-4">
+      <WidgetErrorBoundary title="Key signals unavailable" description="Other dashboard sections are still available.">
+        <section className="space-y-4">
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="section-kicker">4 key signals</p>
@@ -122,15 +145,29 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
           <p className="text-sm text-[color:var(--text-muted)]">Tap a card to open details when you need more context.</p>
         </div>
 
-        <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {keySignals.map((indicator) => (
-            <HomepageIndicatorCard key={indicator.slug} indicator={indicator} />
-          ))}
-        </div>
-      </section>
+        {keySignals.length > 0 ? (
+          <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {keySignals.map((indicator) => (
+              <WidgetErrorBoundary
+                key={indicator.slug}
+                title={`${indicator.shortName} is unavailable`}
+                description="One broken signal card should not take down the full dashboard."
+              >
+                <HomepageIndicatorCard indicator={indicator} />
+              </WidgetErrorBoundary>
+            ))}
+          </div>
+        ) : (
+          <div className="surface-card rounded-[24px] p-5 text-sm text-[color:var(--text-secondary)]">
+            Key signals are unavailable right now.
+          </div>
+        )}
+        </section>
+      </WidgetErrorBoundary>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <div className="surface-card min-w-0 overflow-hidden rounded-[28px] p-5 md:p-6">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <WidgetErrorBoundary title="Changes unavailable" description="The next-step block is still available.">
+          <div className="surface-card min-w-0 overflow-hidden rounded-[28px] p-5 md:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="section-kicker">What changed today</p>
@@ -140,7 +177,7 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
           </div>
 
           <div className="mt-5 space-y-3">
-            {changeLeaders.map((indicator) => (
+            {changeLeaders.length > 0 ? changeLeaders.map((indicator) => (
               <Link
                 key={indicator.slug}
                 href={`/${indicator.module}#${indicator.slug}`}
@@ -155,11 +192,17 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
                   <p className={`mt-1 text-sm font-medium ${changeTone(indicator)}`}>{formatChange(indicator.change, indicator.unit)}</p>
                 </div>
               </Link>
-            ))}
+            )) : (
+              <div className="surface-inset rounded-[22px] p-4 text-sm text-[color:var(--text-secondary)]">
+                No major changes are available right now.
+              </div>
+            )}
           </div>
-        </div>
+          </div>
+        </WidgetErrorBoundary>
 
-        <div className="surface-card min-w-0 overflow-hidden rounded-[28px] p-5 md:p-6">
+        <WidgetErrorBoundary title="Next steps unavailable" description="The rest of the dashboard is still available.">
+          <div className="surface-card min-w-0 overflow-hidden rounded-[28px] p-5 md:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="section-kicker">Where to go next</p>
@@ -191,8 +234,9 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
             </div>
             <p className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">{formatTimestamp(freshness.lastUpdated)}</p>
           </div>
-        </div>
-      </section>
+          </div>
+        </WidgetErrorBoundary>
+      </div>
     </div>
   );
 }

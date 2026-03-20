@@ -5,6 +5,7 @@ import { Component } from "react";
 
 type Props = {
   children: ReactNode;
+  resetKey?: string;
 };
 
 type State = {
@@ -20,6 +21,12 @@ export class ClientErrorBoundary extends Component<Props, State> {
     return {
       hasError: true
     };
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false });
+    }
   }
 
   componentDidCatch(error: Error) {
