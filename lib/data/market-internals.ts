@@ -13,9 +13,10 @@ const blueprints: IndicatorBlueprint[] = [
     unitLabel: "Index level",
     frequency: "Daily",
     source: {
-      name: "Cboe",
-      access: "licensed-manual"
-    },
+  name: "FRED CBOE VIX",
+  url: "https://fred.stlouisfed.org/series/VIXCLS",
+  access: "official-free"
+},
     tooltips: internalsTooltip(
       "The VIX measures the implied volatility priced into S&P 500 options over the next 30 days.",
       "Use it as the market's fear gauge. A low VIX supports risk appetite, but an extremely low VIX can also signal complacency.",
@@ -29,7 +30,7 @@ const blueprints: IndicatorBlueprint[] = [
     signalScore: 0.5,
     tone: "positive",
     releaseCadence: "Intraday",
-    provider: { type: "manual" },
+    provider: { type: "fred", seriesId: "VIXCLS" },
     trendSlope: -0.1,
     volatility: 0.3,
     minValue: 9,
