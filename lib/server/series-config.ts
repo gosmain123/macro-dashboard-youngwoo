@@ -51,6 +51,7 @@ export const seriesConfigBySlug: Record<string, SeriesConfig> = {
   "average-weekly-hours": { seriesId: "AWHAETP", transform: "level", limit: 48 },
   "us-2y-treasury": { seriesId: "DGS2", transform: "level", limit: 48 },
   "us-10y-treasury": { seriesId: "DGS10", transform: "level", limit: 48 },
+  "us-30y-treasury": { seriesId: "DGS30", transform: "level", limit: 48 },
   "curve-2s10s": { seriesId: "T10Y2Y", transform: "level", scale: 100, limit: 48 },
   "curve-3m10y": { seriesId: "T10Y3M", transform: "level", scale: 100, limit: 48 },
   "ig-spreads": { seriesId: "BAMLC0A0CM", transform: "level", scale: 100, limit: 48 },
@@ -59,4 +60,5 @@ export const seriesConfigBySlug: Record<string, SeriesConfig> = {
   "ten-year-real-yield": { seriesId: "DFII10", transform: "level", limit: 48 },
   "wti-oil": { seriesId: "DCOILWTICO", transform: "level", limit: 48 },
   gold: { seriesId: "GOLDAMGBD228NLBM", transform: "level", limit: 48 }
+  vix: { seriesId: "VIXCLS", transform: "level", limit: 48 },
 };
