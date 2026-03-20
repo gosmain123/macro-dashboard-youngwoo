@@ -36,13 +36,13 @@ export function MetaChip({
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em]",
+        "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
         toneStyles(tone),
         className
       )}
     >
-      <span className="text-[color:var(--text-muted)]">{label}</span>
-      <span className="truncate text-current">{value}</span>
+      <span className="shrink-0 text-[color:var(--text-muted)]">{label}</span>
+      <span className="min-w-0 truncate text-current">{value}</span>
     </span>
   );
 }

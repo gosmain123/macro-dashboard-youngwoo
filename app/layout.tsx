@@ -1,22 +1,10 @@
 import type { Metadata } from "next";
 
+import { ClientErrorBoundary } from "@/components/client-error-boundary";
 import { WorkspaceProvider } from "@/components/workspace-provider";
 import { SiteShell } from "@/components/site-shell";
 
 import "./globals.css";
-
-const themeScript = `
-  (() => {
-    try {
-      const stored = window.localStorage.getItem("macro-signal-deck:theme");
-      const system = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      const theme = stored === "dark" || stored === "light" ? stored : system;
-      document.documentElement.dataset.theme = theme;
-    } catch {
-      document.documentElement.dataset.theme = "light";
-    }
-  })();
-`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://macro-regime-dashboard.vercel.app"),
@@ -31,13 +19,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="light" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    <html lang="en">
       <body>
         <WorkspaceProvider>
-          <SiteShell>{children}</SiteShell>
+          <ClientErrorBoundary>
+            <SiteShell>{children}</SiteShell>
+          </ClientErrorBoundary>
         </WorkspaceProvider>
       </body>
     </html>

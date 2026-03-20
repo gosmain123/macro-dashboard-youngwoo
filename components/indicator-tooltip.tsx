@@ -105,6 +105,10 @@ export function IndicatorTooltip({
   }, []);
 
   useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
     if (!previewOpen && !drawerOpen) {
       return;
     }
@@ -124,6 +128,10 @@ export function IndicatorTooltip({
   }, [drawerOpen, previewOpen]);
 
   useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
     if (!drawerOpen) {
       document.body.style.overflow = "";
       return;
@@ -205,7 +213,7 @@ export function IndicatorTooltip({
           id={previewId}
           role="tooltip"
           className={cn(
-            "surface-strong absolute right-0 top-12 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-[24px] p-4 transition",
+            "surface-strong absolute right-0 top-12 z-30 w-[min(19rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[22px] p-4 transition",
             previewOpen ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
           )}
         >
@@ -247,7 +255,7 @@ export function IndicatorTooltip({
             aria-modal="true"
             aria-labelledby={drawerTitleId}
             className={cn(
-              "surface-strong relative z-10 flex max-h-[min(90vh,60rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] transition duration-200",
+              "surface-strong relative z-10 flex max-h-[min(88vh,58rem)] w-full max-w-[64rem] min-w-0 flex-col overflow-hidden rounded-[30px] transition duration-200",
               drawerOpen ? "translate-y-0 scale-100" : "translate-y-6 scale-[0.98]"
             )}
           >
@@ -278,10 +286,10 @@ export function IndicatorTooltip({
               </div>
             </div>
 
-            <div className="max-h-[calc(90vh-6rem)] overflow-y-auto px-6 py-6 sm:px-7">
-              <div className="space-y-5">
-                <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-                  <div className="surface-card rounded-[24px] p-5">
+            <div className="max-h-[calc(88vh-6rem)] overflow-y-auto px-6 py-6 sm:px-7">
+              <div className="space-y-[18px]">
+                <section className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                  <div className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">Current value</p>
                     <p className="mt-3 text-4xl font-semibold text-[color:var(--text-primary)]">
                       {formatIndicatorValue(indicator.currentValue, indicator.unit)}
@@ -311,7 +319,7 @@ export function IndicatorTooltip({
                     </div>
                   </div>
 
-                  <div className="surface-card rounded-[24px] p-5">
+                  <div className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
                     <SparklineChart
                       data={indicator.chartHistory}
                       frequency={indicator.frequency}
@@ -323,7 +331,7 @@ export function IndicatorTooltip({
 
                 <div className="grid gap-4 xl:grid-cols-2">
                   {detailSections.map((section) => (
-                    <section key={section.key} className="surface-card rounded-[24px] p-5">
+                    <section key={section.key} className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">
                         {section.label}
                       </p>
@@ -333,7 +341,7 @@ export function IndicatorTooltip({
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-3">
-                  <section className="surface-card rounded-[24px] p-5">
+                  <section className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Source</p>
                     {indicator.source.url ? (
                       <a
@@ -353,7 +361,7 @@ export function IndicatorTooltip({
                     </p>
                   </section>
 
-                  <section className="surface-card rounded-[24px] p-5">
+                  <section className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Release timing</p>
                     <div className="mt-3 flex items-center gap-2 text-[color:var(--text-muted)]">
                       <CalendarClock className="h-4 w-4" />
@@ -363,7 +371,7 @@ export function IndicatorTooltip({
                     <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{indicator.releaseCadence}</p>
                   </section>
 
-                  <section className="surface-card rounded-[24px] p-5">
+                  <section className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Trust and fetch</p>
                     <p className="mt-3 text-sm text-[color:var(--text-primary)]">
                       {indicator.lastFailedFetch
@@ -380,14 +388,14 @@ export function IndicatorTooltip({
 
                 {followUpLogic ? <FollowUpLogicCard logic={followUpLogic} /> : null}
 
-                <section className="surface-card rounded-[24px] p-5">
+                <section className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Check next</p>
                   <div className="mt-4">
                     <IndicatorActionLinks indicator={indicator} layout="panel" />
                   </div>
                 </section>
 
-                <section className="surface-card rounded-[24px] p-5">
+                <section className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Workspace actions</p>
                   <div className="mt-4">
                     <IndicatorWorkspaceActions slug={indicator.slug} name={indicator.name} visibleSlugs={visibleSlugs} />

@@ -36,80 +36,80 @@ function clampLabel(value: string, maxLength = 42) {
 }
 
 function toneStyles(tone: FlowTone, selected: boolean) {
-  const selectedClass = selected ? "ring-2 ring-offset-0 shadow-[0_18px_40px_rgba(15,23,42,0.12)]" : "shadow-sm";
+  const selectedClass = selected ? "ring-1 ring-offset-0 shadow-[0_10px_24px_rgba(15,23,42,0.06)]" : "shadow-sm";
 
   if (tone === "emerald") {
     return cn(
-      "border-emerald-200/80 bg-emerald-500/10 text-emerald-950 ring-emerald-300/70 hover:border-emerald-300 hover:bg-emerald-500/20 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-100 dark:ring-emerald-400/30 dark:hover:border-emerald-300/30 dark:hover:bg-emerald-400/20",
+      "border-emerald-200/75 bg-emerald-500/8 text-emerald-950 ring-emerald-300/65 hover:border-emerald-300 hover:bg-emerald-500/12",
       selectedClass
     );
   }
 
   if (tone === "amber") {
     return cn(
-      "border-amber-200/80 bg-amber-500/10 text-amber-950 ring-amber-300/70 hover:border-amber-300 hover:bg-amber-500/20 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-100 dark:ring-amber-400/30 dark:hover:border-amber-300/30 dark:hover:bg-amber-400/20",
+      "border-amber-200/75 bg-amber-500/8 text-amber-950 ring-amber-300/65 hover:border-amber-300 hover:bg-amber-500/12",
       selectedClass
     );
   }
 
   if (tone === "rose") {
     return cn(
-      "border-rose-200/80 bg-rose-500/10 text-rose-950 ring-rose-300/70 hover:border-rose-300 hover:bg-rose-500/20 dark:border-rose-400/25 dark:bg-rose-400/10 dark:text-rose-100 dark:ring-rose-400/30 dark:hover:border-rose-300/30 dark:hover:bg-rose-400/20",
+      "border-rose-200/75 bg-rose-500/8 text-rose-950 ring-rose-300/65 hover:border-rose-300 hover:bg-rose-500/12",
       selectedClass
     );
   }
 
   if (tone === "cyan") {
     return cn(
-      "border-cyan-200/80 bg-cyan-500/10 text-cyan-950 ring-cyan-300/70 hover:border-cyan-300 hover:bg-cyan-500/20 dark:border-cyan-400/25 dark:bg-cyan-400/10 dark:text-cyan-100 dark:ring-cyan-400/30 dark:hover:border-cyan-300/30 dark:hover:bg-cyan-400/20",
+      "border-cyan-200/75 bg-cyan-500/8 text-cyan-950 ring-cyan-300/65 hover:border-cyan-300 hover:bg-cyan-500/12",
       selectedClass
     );
   }
 
   return cn(
-    "border-slate-200/90 bg-slate-500/10 text-slate-900 ring-slate-300/70 hover:border-slate-300 hover:bg-slate-500/10 dark:border-slate-400/20 dark:bg-slate-400/10 dark:text-slate-100 dark:ring-slate-400/30 dark:hover:border-slate-300/30 dark:hover:bg-slate-400/10",
+    "border-slate-200/90 bg-slate-500/8 text-slate-900 ring-slate-300/65 hover:border-slate-300 hover:bg-slate-500/10",
     selectedClass
   );
 }
 
 function toneChipStyles(tone: FlowTone) {
   if (tone === "emerald") {
-    return "bg-emerald-500/20 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-200";
+    return "bg-emerald-500/14 text-emerald-700";
   }
 
   if (tone === "amber") {
-    return "bg-amber-500/20 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200";
+    return "bg-amber-500/14 text-amber-700";
   }
 
   if (tone === "rose") {
-    return "bg-rose-500/20 text-rose-700 dark:bg-rose-400/20 dark:text-rose-200";
+    return "bg-rose-500/14 text-rose-700";
   }
 
   if (tone === "cyan") {
-    return "bg-cyan-500/20 text-cyan-700 dark:bg-cyan-400/20 dark:text-cyan-200";
+    return "bg-cyan-500/14 text-cyan-700";
   }
 
-  return "bg-slate-500/10 text-slate-700 dark:bg-slate-400/10 dark:text-slate-200";
+  return "bg-slate-500/8 text-slate-700";
 }
 
 function nodeDotStyles(tone: FlowTone) {
   if (tone === "emerald") {
-    return "bg-emerald-500 dark:bg-emerald-300";
+    return "bg-emerald-500";
   }
 
   if (tone === "amber") {
-    return "bg-amber-500 dark:bg-amber-300";
+    return "bg-amber-500";
   }
 
   if (tone === "rose") {
-    return "bg-rose-500 dark:bg-rose-300";
+    return "bg-rose-500";
   }
 
   if (tone === "cyan") {
-    return "bg-cyan-500 dark:bg-cyan-300";
+    return "bg-cyan-500";
   }
 
-  return "bg-slate-500 dark:bg-slate-300";
+  return "bg-slate-500";
 }
 
 function MapNodeButton({
@@ -132,16 +132,16 @@ function MapNodeButton({
       onClick={() => onSelect(node.detailId)}
       aria-pressed={selected}
       className={cn(
-        "w-full rounded-[24px] border px-4 py-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-border)]",
-        compact ? "min-h-[5.5rem]" : "min-h-[6.4rem]",
+        "w-full max-w-full overflow-hidden rounded-[22px] border px-4 py-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-border)]",
+        compact ? "min-h-[5rem]" : "min-h-[5.8rem]",
         toneStyles(node.tone, selected)
       )}
     >
       <div className="flex items-start gap-3">
         <span className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", nodeDotStyles(node.tone))} />
         <div className="min-w-0">
-          <p className="text-sm font-semibold leading-5">{node.label}</p>
-          {node.sublabel ? <p className="mt-1 text-xs leading-5 text-current/75">{node.sublabel}</p> : null}
+          <p className="break-words text-sm font-semibold leading-5 [overflow-wrap:anywhere]">{node.label}</p>
+          {node.sublabel ? <p className="mt-1 break-words text-xs leading-5 text-current/75 [overflow-wrap:anywhere]">{node.sublabel}</p> : null}
         </div>
       </div>
     </button>
@@ -150,7 +150,7 @@ function MapNodeButton({
 
 function FlowArrow({ direction = "right" }: { direction?: "right" | "down" }) {
   return (
-    <div className="flex items-center justify-center text-[color:var(--text-muted)]">
+    <div className="surface-inset flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[color:var(--text-muted)]">
       {direction === "right" ? <ArrowRight className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
     </div>
   );
@@ -166,7 +166,7 @@ function DetailPanel({
   const detail = detailId ? macroFlowDetails[detailId] : null;
 
   return (
-    <aside className="surface-strong sticky top-24 hidden max-h-[calc(100vh-7rem)] overflow-hidden rounded-[32px] border border-[color:var(--border-soft)] xl:flex xl:flex-col">
+    <aside className="surface-strong sticky top-24 hidden min-h-[32rem] w-full min-w-0 max-w-full self-start overflow-hidden rounded-[30px] border border-[color:var(--border-soft)] xl:flex xl:max-h-[calc(100vh-7rem)] xl:flex-col">
       {!detail ? (
         <div className="flex h-full flex-col items-start justify-center gap-5 px-7 py-8">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--surface-muted)] text-[color:var(--accent-strong)]">
@@ -208,12 +208,12 @@ function DetailPanel({
 
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <div className="space-y-4">
-              <section className="surface-card rounded-[24px] p-5">
+              <section className="surface-card rounded-[22px] p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent-strong)]">Why this matters</p>
                 <p className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">{detail.whyItMatters}</p>
               </section>
 
-              <section className="surface-card rounded-[24px] p-5">
+              <section className="surface-card rounded-[22px] p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent-strong)]">What it can mean</p>
                 <div className="mt-4 space-y-3">
                   {detail.cases.map((item) => (
@@ -225,7 +225,7 @@ function DetailPanel({
                 </div>
               </section>
 
-              <section className="surface-card rounded-[24px] p-5">
+              <section className="surface-card rounded-[22px] p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent-strong)]">What to check next</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {detail.checkNext.map((item) => (
@@ -239,7 +239,7 @@ function DetailPanel({
                 </div>
               </section>
 
-              <section className="surface-card rounded-[24px] p-5">
+              <section className="surface-card rounded-[22px] p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent-strong)]">Common mistakes</p>
                 <ul className="mt-4 space-y-3">
                   {detail.commonMistakes.map((item) => (
@@ -250,7 +250,7 @@ function DetailPanel({
                 </ul>
               </section>
 
-              <section className="surface-card rounded-[24px] p-5">
+              <section className="surface-card rounded-[22px] p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent-strong)]">Market view</p>
                 <p className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">{detail.marketView}</p>
               </section>
@@ -320,7 +320,16 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
     }
 
     const syncFromHash = () => {
-      const hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+      let hash = window.location.hash.replace(/^#/, "");
+
+      try {
+        hash = decodeURIComponent(hash);
+      } catch {
+        setSelectedId(null);
+        setDrawerOpen(false);
+        updateHash(null);
+        return;
+      }
 
       if (!hash || !detailIds.has(hash)) {
         setSelectedId(null);
@@ -344,6 +353,10 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
   }, [isDesktop]);
 
   useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
     if (!drawerOpen) {
       document.body.style.overflow = "";
       return;
@@ -406,8 +419,8 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
 
   return (
     <>
-      <div className="space-y-8">
-        <section className="surface-card rounded-[34px] p-6 md:p-8">
+      <div className="min-w-0 space-y-8">
+        <section className="surface-card overflow-hidden rounded-[30px] p-6 md:p-7">
           <div className="flex flex-col gap-5">
             <div>
               <p className="section-kicker">Macro Flow</p>
@@ -419,7 +432,7 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
 
             <div className="grid gap-3 md:grid-cols-3">
               {topStrip.map((item) => (
-                <div key={item.label} className="surface-inset rounded-[22px] px-4 py-4">
+                <div key={item.label} className="surface-inset min-w-0 overflow-hidden rounded-[20px] px-4 py-3.5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--accent-strong)]">{item.label}</p>
                   <p className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">{item.value}</p>
                 </div>
@@ -428,18 +441,18 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
           </div>
         </section>
 
-        <div className="xl:grid xl:grid-cols-[minmax(0,1.45fr)_24rem] xl:gap-6">
-          <div className="space-y-8">
+        <div className="min-w-0 xl:grid xl:grid-cols-[minmax(0,1.08fr)_minmax(21.5rem,23rem)] xl:items-start xl:gap-8">
+          <div className="min-w-0 space-y-8">
             <section className="space-y-4">
               <div>
                 <p className="section-kicker">Start Here</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">Default reading order</h2>
               </div>
 
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-2">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-stretch xl:gap-2">
                 {startHereFlow.map((node, index) => (
-                  <div key={node.detailId} className="flex flex-col gap-3 lg:flex-row lg:flex-1 lg:items-center lg:gap-2">
-                    <div className="lg:flex-1">
+                  <div key={node.detailId} className="flex min-w-0 flex-col gap-3 xl:flex-1 xl:flex-row xl:items-stretch xl:gap-2">
+                    <div className="min-w-0 xl:flex-1">
                       <MapNodeButton
                         node={node}
                         selected={selectedId === node.detailId}
@@ -449,10 +462,10 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                     </div>
                     {index < startHereFlow.length - 1 ? (
                       <>
-                        <div className="lg:hidden">
+                        <div className="xl:hidden">
                           <FlowArrow direction="down" />
                         </div>
-                        <div className="hidden lg:flex">
+                        <div className="hidden xl:flex xl:items-center">
                           <FlowArrow direction="right" />
                         </div>
                       </>
@@ -470,7 +483,7 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
 
               <div className="grid gap-4 xl:grid-cols-2">
                 {scenarioFlowMaps.map((lane) => (
-                  <article key={lane.id} id={lane.id} className="surface-card scroll-mt-28 rounded-[28px] p-5">
+                  <article key={lane.id} id={lane.id} className="surface-card scroll-mt-28 overflow-hidden rounded-[26px] p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--accent-strong)]">{lane.title}</h3>
                       <button
@@ -482,10 +495,10 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                       </button>
                     </div>
 
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-2">
+                    <div className="flex min-w-0 flex-col gap-3">
                       {lane.nodes.map((node, index) => (
-                        <div key={`${lane.id}-${index}`} className="flex flex-col gap-3 lg:flex-row lg:flex-1 lg:items-center lg:gap-2">
-                          <div className="lg:flex-1">
+                        <div key={`${lane.id}-${index}`} className="flex min-w-0 flex-col gap-3">
+                          <div className="min-w-0">
                             <MapNodeButton
                               node={node}
                               selected={selectedId === node.detailId}
@@ -495,11 +508,8 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                           </div>
                           {index < lane.nodes.length - 1 ? (
                             <>
-                              <div className="lg:hidden">
+                              <div className="flex justify-center">
                                 <FlowArrow direction="down" />
-                              </div>
-                              <div className="hidden lg:flex">
-                                <FlowArrow direction="right" />
                               </div>
                             </>
                           ) : null}
@@ -519,12 +529,12 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
 
               <div className="grid gap-4 xl:grid-cols-2">
                 {nextStepMaps.map((lane) => (
-                  <article key={lane.id} className="surface-card rounded-[28px] p-5">
+                  <article key={lane.id} className="surface-card overflow-hidden rounded-[26px] p-5">
                     <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--accent-strong)]">{lane.title}</h3>
-                    <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:gap-2">
+                    <div className="mt-4 flex min-w-0 flex-col gap-3">
                       {lane.nodes.map((node, index) => (
-                        <div key={`${lane.id}-${index}`} className="flex flex-col gap-3 md:flex-row md:flex-1 md:items-center md:gap-2">
-                          <div className="md:flex-1">
+                        <div key={`${lane.id}-${index}`} className="flex min-w-0 flex-col gap-3">
+                          <div className="min-w-0">
                             <MapNodeButton
                               node={node}
                               selected={selectedId === node.detailId}
@@ -534,11 +544,8 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                           </div>
                           {index < lane.nodes.length - 1 ? (
                             <>
-                              <div className="md:hidden">
+                              <div className="flex justify-center">
                                 <FlowArrow direction="down" />
-                              </div>
-                              <div className="hidden md:flex">
-                                <FlowArrow direction="right" />
                               </div>
                             </>
                           ) : null}
@@ -556,7 +563,7 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                 <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">Frame the tentative macro view</h2>
               </div>
 
-              <div className="surface-card rounded-[30px] p-5 md:p-6">
+              <div className="surface-card overflow-hidden rounded-[28px] p-5 md:p-6">
                 <div className="mx-auto max-w-sm">
                   <MapNodeButton
                     node={regimeDecisionTree.root}
@@ -572,7 +579,7 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
 
                 <div className="grid gap-4 xl:grid-cols-2">
                   {regimeDecisionTree.branches.map((branch) => (
-                    <div key={branch.branch} className="surface-inset rounded-[26px] p-4">
+                    <div key={branch.branch} className="surface-inset min-w-0 overflow-hidden rounded-[22px] p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--accent-strong)]">
                         <GitBranch className="h-4 w-4" />
                         {branch.branch}
@@ -592,7 +599,7 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                         <FlowArrow direction="down" />
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2">
                         {branch.outcomes.map((outcome) => (
                           <MapNodeButton
                             key={outcome.detailId}
@@ -618,8 +625,8 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
 
               <div className="grid gap-4 xl:grid-cols-2">
                 {mistakeNodes.map((item) => (
-                  <article key={item.mistake.detailId} id={item.mistake.detailId} className="surface-card rounded-[26px] p-5">
-                    <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
+                  <article key={item.mistake.detailId} id={item.mistake.detailId} className="surface-card overflow-hidden rounded-[24px] p-5">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
                       <MapNodeButton
                         node={item.mistake}
                         selected={selectedId === item.mistake.detailId}
@@ -627,8 +634,8 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                         compact
                       />
                       <div className="flex justify-center text-[color:var(--text-muted)]">
-                        <ArrowRight className="hidden h-4 w-4 md:block" />
-                        <ArrowDown className="h-4 w-4 md:hidden" />
+                        <ArrowRight className="hidden h-4 w-4 lg:block" />
+                        <ArrowDown className="h-4 w-4 lg:hidden" />
                       </div>
                       <MapNodeButton
                         node={item.better}
@@ -669,7 +676,7 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
           aria-modal="true"
           aria-labelledby="macro-flow-drawer-title"
           className={cn(
-            "surface-strong absolute right-0 top-0 z-10 flex h-full w-full max-w-md flex-col overflow-hidden border-l border-[color:var(--border-soft)] transition duration-200",
+            "surface-strong absolute right-0 top-0 z-10 flex h-full w-[min(100vw,24rem)] max-w-full min-w-0 flex-col overflow-hidden border-l border-[color:var(--border-soft)] transition duration-200",
             drawerOpen && selectedDetail ? "translate-x-0" : "translate-x-full"
           )}
         >

@@ -92,10 +92,10 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
   ] as const;
 
   return (
-    <div className="space-y-6">
-      <section className="surface-card rounded-[32px] p-6 md:p-8">
+    <div className="min-w-0 space-y-6">
+      <section className="surface-card overflow-hidden rounded-[32px] p-6 md:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-4xl">
+          <div className="min-w-0 max-w-4xl">
             <p className="section-kicker">Macro summary</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[color:var(--text-primary)] md:text-4xl">
               {payload.regimeSnapshot.title}
@@ -122,15 +122,15 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
           <p className="text-sm text-[color:var(--text-muted)]">Tap a card to open details when you need more context.</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-4">
           {keySignals.map((indicator) => (
             <HomepageIndicatorCard key={indicator.slug} indicator={indicator} />
           ))}
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="surface-card rounded-[28px] p-5 md:p-6">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <div className="surface-card min-w-0 overflow-hidden rounded-[28px] p-5 md:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="section-kicker">What changed today</p>
@@ -144,7 +144,7 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
               <Link
                 key={indicator.slug}
                 href={`/${indicator.module}#${indicator.slug}`}
-                className="surface-inset flex min-h-[6.5rem] items-start justify-between gap-4 rounded-[22px] p-4 transition hover:border-[color:var(--border-strong)]"
+                className="surface-inset flex min-h-[6.5rem] min-w-0 items-start justify-between gap-4 overflow-hidden rounded-[22px] p-4 transition hover:border-[color:var(--border-strong)]"
               >
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[color:var(--text-primary)]">{indicator.name}</p>
@@ -159,7 +159,7 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
           </div>
         </div>
 
-        <div className="surface-card rounded-[28px] p-5 md:p-6">
+        <div className="surface-card min-w-0 overflow-hidden rounded-[28px] p-5 md:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="section-kicker">Where to go next</p>
@@ -173,7 +173,7 @@ export function DashboardHome({ payload }: { payload: DashboardPayload }) {
               <Link
                 key={step.href}
                 href={step.href}
-                className="surface-inset flex min-h-[6.5rem] items-start justify-between gap-4 rounded-[22px] p-4 transition hover:border-[color:var(--border-strong)]"
+                className="surface-inset flex min-h-[6.5rem] min-w-0 items-start justify-between gap-4 overflow-hidden rounded-[22px] p-4 transition hover:border-[color:var(--border-strong)]"
               >
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[color:var(--text-primary)]">{step.title}</p>

@@ -49,32 +49,70 @@ function unique(values: string[]) {
   return [...new Set(values)];
 }
 
+function isSavedSnapshot(value: unknown): value is SavedSnapshot {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const snapshot = value as Partial<SavedSnapshot>;
+
+  return (
+    typeof snapshot.id === "string" &&
+    typeof snapshot.name === "string" &&
+    typeof snapshot.path === "string" &&
+    typeof snapshot.savedAt === "string" &&
+    typeof snapshot.watchlistCount === "number" &&
+    typeof snapshot.pinnedCount === "number"
+  );
+}
+
+function normalizeWorkspaceState(value: Partial<WorkspaceState> | null | undefined): WorkspaceState {
+  return {
+    pinnedSlugs: unique(Array.isArray(value?.pinnedSlugs) ? value.pinnedSlugs.filter((entry): entry is string => typeof entry === "string") : []),
+    hiddenSlugs: unique(Array.isArray(value?.hiddenSlugs) ? value.hiddenSlugs.filter((entry): entry is string => typeof entry === "string") : []),
+    orderedSlugs: unique(Array.isArray(value?.orderedSlugs) ? value.orderedSlugs.filter((entry): entry is string => typeof entry === "string") : []),
+    watchlistSlugs: unique(Array.isArray(value?.watchlistSlugs) ? value.watchlistSlugs.filter((entry): entry is string => typeof entry === "string") : []),
+    savedSnapshots: Array.isArray(value?.savedSnapshots) ? value.savedSnapshots.filter(isSavedSnapshot).slice(0, 12) : []
+  };
+}
+
+function readWorkspaceState() {
+  if (typeof window === "undefined") {
+    return defaultState;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+
+    if (!raw) {
+      return defaultState;
+    }
+
+    return normalizeWorkspaceState(JSON.parse(raw) as Partial<WorkspaceState>);
+  } catch {
+    return defaultState;
+  }
+}
+
+function writeWorkspaceState(value: WorkspaceState) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(value));
+  } catch {
+    // Keep the app usable even when storage is blocked or quota is exceeded.
+  }
+}
+
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<WorkspaceState>(defaultState);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-
-      if (!raw) {
-        setHydrated(true);
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as Partial<WorkspaceState>;
-      setState({
-        pinnedSlugs: unique(parsed.pinnedSlugs ?? []),
-        hiddenSlugs: unique(parsed.hiddenSlugs ?? []),
-        orderedSlugs: unique(parsed.orderedSlugs ?? []),
-        watchlistSlugs: unique(parsed.watchlistSlugs ?? []),
-        savedSnapshots: parsed.savedSnapshots ?? []
-      });
-    } catch {
-      setState(defaultState);
-    } finally {
-      setHydrated(true);
-    }
+    setState(readWorkspaceState());
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -82,7 +120,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    window.localStorage.setItem(storageKey, JSON.stringify(state));
+    writeWorkspaceState(state);
   }, [hydrated, state]);
 
   const value = useMemo<WorkspaceContextValue>(() => {

@@ -24,18 +24,18 @@ function LinkGroup({
 
   const tone =
     variant === "confirm"
-      ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+      ? "border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]"
       : variant === "related"
-        ? "border-white/10 bg-white/5 text-slate-200"
-        : "border-emerald-300/25 bg-emerald-300/10 text-emerald-100";
+        ? "border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] text-[color:var(--text-primary)]"
+        : "border-[rgba(5,150,105,0.18)] bg-[rgba(5,150,105,0.1)] text-[color:var(--positive-text)]";
 
   return (
     <Link
       href={href}
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium uppercase tracking-[0.16em] transition hover:border-white/30 ${tone}`}
+      className={`inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] transition hover:border-[color:var(--border-strong)] ${tone}`}
     >
       {icon}
-      {label}
+      <span className="truncate">{label}</span>
     </Link>
   );
 }
@@ -60,7 +60,7 @@ export function IndicatorActionLinks({
   if (layout === "panel") {
     return (
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div className="surface-inset rounded-[20px] p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Check next</p>
           {navigation.checkNext.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -73,7 +73,7 @@ export function IndicatorActionLinks({
           )}
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div className="surface-inset rounded-[20px] p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Related indicator</p>
           {navigation.related.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -86,7 +86,7 @@ export function IndicatorActionLinks({
           )}
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div className="surface-inset rounded-[20px] p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Confirm in</p>
           {navigation.confirmIn.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -103,7 +103,7 @@ export function IndicatorActionLinks({
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       {navigation.checkNext[0] ? (
         <LinkGroup label={`Check ${navigation.checkNext[0].label}`} href={navigation.checkNext[0].href} variant="next" />
       ) : null}

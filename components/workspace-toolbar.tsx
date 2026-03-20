@@ -8,7 +8,7 @@ import { useWorkspace } from "@/components/workspace-provider";
 import { formatTimestamp } from "@/lib/utils";
 
 export function WorkspaceToolbar() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/";
   const { hiddenSlugs, pinnedSlugs, watchlistSlugs, savedSnapshots, saveSnapshot, removeSnapshot, resetWorkspace } =
     useWorkspace();
 
@@ -21,7 +21,7 @@ export function WorkspaceToolbar() {
   }
 
   return (
-    <div className="surface-card rounded-[28px] p-4 md:p-5">
+    <div className="surface-card overflow-hidden rounded-[28px] p-4 md:p-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="section-kicker">Workspace</p>
@@ -52,7 +52,7 @@ export function WorkspaceToolbar() {
           </summary>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {savedSnapshots.slice(0, 6).map((snapshot) => (
-              <div key={snapshot.id} className="surface-card rounded-[20px] p-4">
+              <div key={snapshot.id} className="surface-card min-w-0 overflow-hidden rounded-[20px] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-[color:var(--text-primary)]">{snapshot.name}</p>

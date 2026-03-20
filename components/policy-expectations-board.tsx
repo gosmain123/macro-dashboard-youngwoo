@@ -46,8 +46,8 @@ export function PolicyExpectationsBoard({
   return (
     <div className="space-y-8">
       <section className="rounded-[34px] border border-white/10 bg-white/5 p-6 shadow-soft backdrop-blur-xl md:p-8">
-        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <div>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-200">Policy Expectations</p>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">FedWatch-style rate path, without losing the macro context</h1>
             <p className="mt-4 max-w-3xl text-lg leading-7 text-slate-300 mode-beginner-only">{payload.headline}</p>
@@ -57,7 +57,7 @@ export function PolicyExpectationsBoard({
             </div>
           </div>
 
-          <aside className="space-y-4">
+          <aside className="min-w-0 space-y-4">
             <div className="rounded-[26px] border border-white/8 bg-slate-950/55 p-5">
               <div className="flex items-center gap-2 text-slate-400">
                 <Radar className="h-4 w-4" />

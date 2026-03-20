@@ -83,8 +83,8 @@ export function PlaybookBoard({ payload }: { payload: DashboardPayload }) {
   const readingOrder = buildReadingOrder(payload);
 
   return (
-    <div className="space-y-8">
-      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+    <div className="min-w-0 space-y-8">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <div className="rounded-[34px] border border-white/10 bg-white/5 p-6 shadow-soft backdrop-blur-xl md:p-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-200">Playbook</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">Turn the dashboard into a reasoning flow</h1>
@@ -105,7 +105,7 @@ export function PlaybookBoard({ payload }: { payload: DashboardPayload }) {
           </div>
         </div>
 
-        <aside className="rounded-[34px] border border-white/10 bg-slate-950/55 p-6 shadow-soft backdrop-blur-xl">
+        <aside className="min-w-0 overflow-hidden rounded-[34px] border border-white/10 bg-slate-950/55 p-6 shadow-soft backdrop-blur-xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-200">Start Here</p>
           <div className="mt-5 rounded-[26px] border border-white/8 bg-white/5 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Current regime summary</p>
