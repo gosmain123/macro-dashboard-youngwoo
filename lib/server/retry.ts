@@ -12,7 +12,7 @@ function sleep(delayMs: number) {
 
 export async function withRetry<T>(
   operation: () => Promise<T>,
-  { attempts = 3, baseDelayMs = 400, factor = 2 }: RetryOptions = {}
+  { attempts = 2, baseDelayMs = 250, factor = 2 }: RetryOptions = {}
 ) {
   let lastError: unknown;
 
