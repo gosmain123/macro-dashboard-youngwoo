@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import {
-  CalendarClock,
   ChevronRight,
-  Clock3,
   Newspaper,
   Radar,
   Sparkles,
@@ -588,40 +586,23 @@ export function WorkflowBoard({ payload }: { payload: WorkflowPayload }) {
 
   return (
     <div className="min-w-0 space-y-8">
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-        <div className="min-w-0 overflow-hidden rounded-[34px] border border-white/10 bg-white/5 p-6 shadow-soft backdrop-blur-xl md:p-8">
+      <section className="surface-card min-w-0 overflow-hidden rounded-[34px] p-6 md:p-8">
+        <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-200">Workflow</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">Daily macro workflow</h1>
-          <p className="mt-4 max-w-3xl text-lg leading-7 text-slate-300 mode-beginner-only">
-            Read the release, compare it with prior and consensus, check whether the surprise is real, then confirm the move in the next part of the dashboard.
+          <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300">
+            See the weekly tone first, then open the day that matters and confirm the move in the next part of the dashboard.
           </p>
-        </div>
-
-        <aside className="min-w-0 overflow-hidden rounded-[34px] border border-white/10 bg-slate-950/55 p-6 shadow-soft backdrop-blur-xl">
-          <div className="flex items-center gap-2 text-slate-400">
-            <Clock3 className="h-4 w-4" />
-            Updated
-          </div>
-          <p className="mt-3 text-lg font-semibold text-white">{formatTimestamp(payload.updatedAt)}</p>
-          <div className="mt-5 rounded-2xl border border-white/8 bg-white/5 p-4">
-            <div className="flex items-center gap-2 text-slate-400">
-              <CalendarClock className="h-4 w-4" />
-              Next on deck
-            </div>
-            <p className="mt-3 text-base font-semibold text-white">{nextRelease?.indicatorName ?? "Schedule pending"}</p>
-            <p className="mt-2 text-sm text-slate-300">
-              {nextRelease ? formatReleaseLabel(nextRelease.nextReleaseDate, nextRelease.timeLabel) : "No event scheduled"}
-            </p>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
+            <MetaChip label="Updated" value={formatTimestamp(payload.updatedAt)} tone="slate" />
+            <MetaChip label="Next on deck" value={nextRelease?.indicatorName ?? "Schedule pending"} tone="cyan" className="max-w-full" />
             <MetaChip label="Trust" value="Visible" tone="emerald" />
             <MetaChip label="Preview gap" value="Explicit" tone="amber" />
-            <MetaChip label="Follow-up" value="Linked" tone="cyan" />
           </div>
-          <p className="mt-4 text-sm leading-6 text-slate-300 mode-beginner-only">
-            Pending release timing and missing preview coverage are now shown as separate states so users can tell whether data is simply not out yet or not connected.
+          <p className="mt-3 text-sm text-slate-300">
+            {nextRelease ? formatReleaseLabel(nextRelease.nextReleaseDate, nextRelease.timeLabel) : "No event scheduled right now."}
           </p>
-        </aside>
+        </div>
       </section>
 
       <section className="space-y-5">

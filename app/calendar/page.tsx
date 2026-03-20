@@ -10,5 +10,5 @@ export const metadata = {
 
 export default async function CalendarPage() {
   const events = await getCalendarPayload();
-  return <CalendarBoard events={events} />;
+  return <CalendarBoard events={events} initialDate={new Date().toISOString().slice(0, 10)} />;
 }

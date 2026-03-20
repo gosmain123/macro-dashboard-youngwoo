@@ -153,7 +153,7 @@ export interface CalendarEvent {
   category: "macro release" | "central bank" | "auction" | "filing" | "liquidity";
   date: string;
   timeLabel: string;
-  importance: "high" | "medium";
+  importance: "high" | "medium" | "low";
   whyItMatters: string;
   whatToWatch: string;
 }
