@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowDown, ArrowRight, ExternalLink, GitBranch, PanelRightOpen, Waypoints, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import {
   macroFlowDetails,
   mistakeNodes,
@@ -20,9 +21,10 @@ import type { DashboardPayload } from "@/types/macro";
 const desktopQuery = "(min-width: 1280px)";
 
 function getNextCatalyst(payload: DashboardPayload) {
+  const calendarEvents = Array.isArray(payload?.calendarEvents) ? payload.calendarEvents : [];
   const today = new Date().toISOString().slice(0, 10);
 
-  return payload.calendarEvents
+  return calendarEvents
     .filter((event) => event.date >= today)
     .sort((left, right) => left.date.localeCompare(right.date))[0];
 }
@@ -282,11 +284,16 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
   const nextCatalyst = useMemo(() => getNextCatalyst(payload), [payload]);
   const topStrip = useMemo(
     () => [
-      { label: "Regime", value: clampLabel(payload.regimeSnapshot.title) },
+      { label: "Regime", value: clampLabel(payload.regimeSnapshot?.title ?? "Macro read unavailable") },
       { label: "Today", value: clampLabel(nextCatalyst?.title ?? "Open calendar") },
       {
         label: "Focus",
-        value: clampLabel(payload.homepage.watchlist.slice(0, 2).map((indicator) => indicator.shortName).join(" / ") || "Core watchlist")
+        value: clampLabel(
+          (Array.isArray(payload.homepage?.watchlist) ? payload.homepage.watchlist : [])
+            .slice(0, 2)
+            .map((indicator) => indicator.shortName)
+            .join(" / ") || "Core watchlist"
+        )
       }
     ],
     [nextCatalyst, payload]
@@ -379,7 +386,11 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
         setDrawerOpen(false);
 
         if (typeof window !== "undefined") {
-          window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+          try {
+            window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+          } catch {
+            // Ignore history update failures and keep the drawer closed.
+          }
         }
       }
     };
@@ -397,7 +408,11 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
       ? `${window.location.pathname}${window.location.search}#${encodeURIComponent(detailId)}`
       : `${window.location.pathname}${window.location.search}`;
 
-    window.history.replaceState(null, "", nextUrl);
+    try {
+      window.history.replaceState(null, "", nextUrl);
+    } catch {
+      // Ignore history update failures so the board remains interactive.
+    }
   }
 
   function handleSelect(detailId: string) {
@@ -443,7 +458,8 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
 
         <div className="min-w-0 xl:grid xl:grid-cols-[minmax(0,1.08fr)_minmax(21.5rem,23rem)] xl:items-start xl:gap-8">
           <div className="min-w-0 space-y-8">
-            <section className="space-y-4">
+            <WidgetErrorBoundary title="Start Here unavailable" description="The rest of the map is still available.">
+              <section className="space-y-4">
               <div>
                 <p className="section-kicker">Start Here</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">Default reading order</h2>
@@ -473,9 +489,11 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                   </div>
                 ))}
               </div>
-            </section>
+              </section>
+            </WidgetErrorBoundary>
 
-            <section className="space-y-4">
+            <WidgetErrorBoundary title="Scenario flows unavailable" description="Other Macro Flow sections are still available.">
+              <section className="space-y-4">
               <div>
                 <p className="section-kicker">Key Scenario Flows</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">The main logic chains</h2>
@@ -519,9 +537,11 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                   </article>
                 ))}
               </div>
-            </section>
+              </section>
+            </WidgetErrorBoundary>
 
-            <section className="space-y-4">
+            <WidgetErrorBoundary title="Next-step map unavailable" description="Other Macro Flow sections are still available.">
+              <section className="space-y-4">
               <div>
                 <p className="section-kicker">What To Check Next</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">Fast handoffs across the dashboard</h2>
@@ -555,9 +575,11 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                   </article>
                 ))}
               </div>
-            </section>
+              </section>
+            </WidgetErrorBoundary>
 
-            <section className="space-y-4">
+            <WidgetErrorBoundary title="Regime tree unavailable" description="Other Macro Flow sections are still available.">
+              <section className="space-y-4">
               <div>
                 <p className="section-kicker">Regime Decision Tree</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">Frame the tentative macro view</h2>
@@ -615,9 +637,11 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                   ))}
                 </div>
               </div>
-            </section>
+              </section>
+            </WidgetErrorBoundary>
 
-            <section className="space-y-4">
+            <WidgetErrorBoundary title="Mistake map unavailable" description="Other Macro Flow sections are still available.">
+              <section className="space-y-4">
               <div>
                 <p className="section-kicker">Common Mistakes</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">Common traps and the cleaner path</h2>
@@ -647,10 +671,13 @@ export function MacroFlowBoard({ payload }: { payload: DashboardPayload }) {
                   </article>
                 ))}
               </div>
-            </section>
+              </section>
+            </WidgetErrorBoundary>
           </div>
 
-          <DetailPanel detailId={selectedId} onClear={clearSelection} />
+          <WidgetErrorBoundary compact title="Detail panel unavailable" description="The main visual map is still usable.">
+            <DetailPanel detailId={selectedId} onClear={clearSelection} />
+          </WidgetErrorBoundary>
         </div>
       </div>
 

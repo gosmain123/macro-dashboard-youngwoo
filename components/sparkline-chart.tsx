@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -34,7 +34,7 @@ export function SparklineChart({
   showOverlay = false,
   variant = "detail"
 }: {
-  data: ChartPoint[];
+  data?: ChartPoint[] | null;
   frequency: Frequency;
   unit: string;
   showOverlay?: boolean;
@@ -45,15 +45,32 @@ export function SparklineChart({
   const [selectedRange, setSelectedRange] = useState<ChartRangeId>(defaultRange);
   const gradientId = useId().replace(/:/g, "");
   const compact = variant === "compact";
+  const safeData = useMemo(
+    () =>
+      Array.isArray(data)
+        ? data.filter(
+            (point) =>
+              point &&
+              typeof point.date === "string" &&
+              Number.isFinite(point.value) &&
+              !Number.isNaN(new Date(`${point.date}T00:00:00Z`).getTime())
+          )
+        : [],
+    [data]
+  );
 
   useEffect(() => {
     setSelectedRange(defaultRange);
   }, [defaultRange, frequency]);
 
-  const visibleData = getChartDataForRange(data, frequency, selectedRange);
+  const visibleData = getChartDataForRange(safeData, frequency, selectedRange);
   const lineType = getChartLineType(frequency);
   const fillOpacity = getChartFillOpacity(frequency);
   const showDots = shouldShowChartDots(frequency, visibleData.length);
+  const canRenderChart = visibleData.length >= 2;
+  const hasOverlayData =
+    showOverlay &&
+    visibleData.some((point) => typeof point.overlay === "number" && Number.isFinite(point.overlay));
 
   return (
     <div className="space-y-3" data-chart-root="true">
@@ -82,66 +99,72 @@ export function SparklineChart({
       )}
 
       <div className={cn("w-full", compact ? "h-24" : "h-48")}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={visibleData} margin={compact ? { top: 6, right: 2, left: 2, bottom: 0 } : { top: 8, right: 6, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--chart-accent)" stopOpacity={0.38 * fillOpacity} />
-                <stop offset="95%" stopColor="var(--chart-accent)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="var(--chart-grid)" vertical={false} horizontal={!compact} />
-            {compact ? null : (
-              <XAxis
-                dataKey="date"
-                tickLine={false}
-                axisLine={false}
-                tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
-                tickFormatter={(value: string) => formatChartAxisDate(value, frequency, selectedRange)}
-                minTickGap={getChartTickMinGap(frequency, selectedRange)}
-                tickMargin={10}
+        {canRenderChart ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={visibleData} margin={compact ? { top: 6, right: 2, left: 2, bottom: 0 } : { top: 8, right: 6, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--chart-accent)" stopOpacity={0.38 * fillOpacity} />
+                  <stop offset="95%" stopColor="var(--chart-accent)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="var(--chart-grid)" vertical={false} horizontal={!compact} />
+              {compact ? null : (
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
+                  tickFormatter={(value: string) => formatChartAxisDate(value, frequency, selectedRange)}
+                  minTickGap={getChartTickMinGap(frequency, selectedRange)}
+                  tickMargin={10}
+                />
+              )}
+              <YAxis hide domain={["auto", "auto"]} />
+              <Tooltip
+                cursor={compact ? false : undefined}
+                formatter={(value: number, name: string) => [
+                  formatIndicatorValue(Number(value), unit),
+                  name === "overlay" ? "Overlay" : "Value"
+                ]}
+                labelFormatter={(value: string) => formatChartTooltipDate(value, frequency)}
+                contentStyle={{
+                  background: "var(--surface-strong)",
+                  border: "1px solid var(--border-soft)",
+                  borderRadius: "16px",
+                  color: "var(--text-primary)"
+                }}
+                itemStyle={{ color: "var(--text-secondary)" }}
+                labelStyle={{ color: "var(--text-muted)" }}
               />
-            )}
-            <YAxis hide domain={["auto", "auto"]} />
-            <Tooltip
-              cursor={compact ? false : undefined}
-              formatter={(value: number, name: string) => [
-                formatIndicatorValue(Number(value), unit),
-                name === "overlay" ? "Overlay" : "Value"
-              ]}
-              labelFormatter={(value: string) => formatChartTooltipDate(value, frequency)}
-              contentStyle={{
-                background: "var(--surface-strong)",
-                border: "1px solid var(--border-soft)",
-                borderRadius: "16px",
-                color: "var(--text-primary)"
-              }}
-              itemStyle={{ color: "var(--text-secondary)" }}
-              labelStyle={{ color: "var(--text-muted)" }}
-            />
-            <Area
-              type={lineType}
-              dataKey="value"
-              stroke="var(--chart-accent)"
-              strokeWidth={2.2}
-              fill={`url(#${gradientId})`}
-              fillOpacity={fillOpacity}
-              dot={showDots ? { r: 2, fill: "var(--chart-accent)", strokeWidth: 0 } : false}
-              activeDot={{ r: 3, fill: "var(--chart-accent)", strokeWidth: 0 }}
-              isAnimationActive={false}
-            />
-            {showOverlay ? (
-              <Line
+              <Area
                 type={lineType}
-                dataKey="overlay"
-                stroke="var(--chart-overlay)"
-                strokeWidth={1.4}
-                dot={false}
+                dataKey="value"
+                stroke="var(--chart-accent)"
+                strokeWidth={2.2}
+                fill={`url(#${gradientId})`}
+                fillOpacity={fillOpacity}
+                dot={showDots ? { r: 2, fill: "var(--chart-accent)", strokeWidth: 0 } : false}
+                activeDot={{ r: 3, fill: "var(--chart-accent)", strokeWidth: 0 }}
                 isAnimationActive={false}
               />
-            ) : null}
-          </AreaChart>
-        </ResponsiveContainer>
+              {hasOverlayData ? (
+                <Line
+                  type={lineType}
+                  dataKey="overlay"
+                  stroke="var(--chart-overlay)"
+                  strokeWidth={1.4}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              ) : null}
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="surface-inset flex h-full items-center justify-center rounded-[18px] px-4 text-center text-xs leading-5 text-[color:var(--text-muted)]">
+            History unavailable
+          </div>
+        )}
       </div>
     </div>
   );

@@ -11,6 +11,9 @@ export function WorkspaceToolbar() {
   const pathname = usePathname() ?? "/";
   const { hiddenSlugs, pinnedSlugs, watchlistSlugs, savedSnapshots, saveSnapshot, removeSnapshot, resetWorkspace } =
     useWorkspace();
+  const safeSnapshots = savedSnapshots.filter(
+    (snapshot) => typeof snapshot.path === "string" && snapshot.path.trim().startsWith("/")
+  );
 
   function handleSaveSnapshot() {
     const trimmedPath = pathname === "/" ? "dashboard" : pathname.replaceAll("/", " ").trim();
@@ -45,13 +48,13 @@ export function WorkspaceToolbar() {
         </div>
       </div>
 
-      {savedSnapshots.length > 0 ? (
+      {safeSnapshots.length > 0 ? (
         <details className="surface-inset mt-4 rounded-[22px] p-4">
           <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--text-primary)]">
-            Saved snapshots ({savedSnapshots.length})
+            Saved snapshots ({safeSnapshots.length})
           </summary>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {savedSnapshots.slice(0, 6).map((snapshot) => (
+            {safeSnapshots.slice(0, 6).map((snapshot) => (
               <div key={snapshot.id} className="surface-card min-w-0 overflow-hidden rounded-[20px] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

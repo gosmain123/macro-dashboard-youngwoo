@@ -67,15 +67,29 @@ export function IndicatorTooltip({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previewId = useId();
   const drawerTitleId = useId();
+  const safeVisibleSlugs =
+    Array.isArray(visibleSlugs) && visibleSlugs.length > 0
+      ? visibleSlugs.filter((slug): slug is string => typeof slug === "string" && slug.length > 0)
+      : [indicator.slug];
+  const safeTooltips = {
+    definition: indicator.tooltips?.definition?.trim() || "Definition unavailable.",
+    whyItMatters: indicator.tooltips?.whyItMatters?.trim() || "Why it matters is unavailable.",
+    howToUse: indicator.tooltips?.howToUse?.trim() || "Usage notes are unavailable.",
+    whatToWatch: indicator.tooltips?.whatToWatch?.trim() || "Follow-up checks are unavailable."
+  };
+  const safeChartHistory = Array.isArray(indicator.chartHistory) ? indicator.chartHistory : [];
   const followUpLogic = getFollowUpLogic(indicator.slug);
   const sourceType = getIndicatorSourceType(indicator);
-  const context = getHistoricalContext(indicator);
+  const context = getHistoricalContext({
+    chartHistory: safeChartHistory,
+    currentValue: Number.isFinite(indicator.currentValue) ? indicator.currentValue : 0
+  });
   const nextLabel =
     indicator.nextReleaseAt
       ? formatTimestamp(indicator.nextReleaseAt)
-      : indicator.release.type === "scheduled"
+      : indicator.release?.type === "scheduled"
         ? formatReleaseLabel(indicator.release.nextReleaseDate, indicator.release.timeLabel)
-        : indicator.release.detail;
+        : indicator.release?.detail ?? "Schedule pending";
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -224,7 +238,7 @@ export function IndicatorTooltip({
             </div>
             <MoveUpRight className="mt-1 h-4 w-4 shrink-0 text-[color:var(--accent-strong)]" />
           </div>
-          <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">{indicator.tooltips.definition}</p>
+          <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">{safeTooltips.definition}</p>
           <button type="button" onClick={openDrawer} className="soft-button-accent mt-4 inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.16em] transition">
             Open full view
             <MoveUpRight className="h-3.5 w-3.5" />
@@ -271,7 +285,7 @@ export function IndicatorTooltip({
                     {indicator.name}
                   </h3>
                   <p className="mt-3 max-w-3xl text-sm leading-6 text-[color:var(--text-secondary)]">
-                    {indicator.summary}
+                    {indicator.summary?.trim() || indicator.advancedSummary?.trim() || "Summary unavailable."}
                   </p>
                 </div>
                 <button
@@ -321,7 +335,7 @@ export function IndicatorTooltip({
 
                   <div className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
                     <SparklineChart
-                      data={indicator.chartHistory}
+                      data={safeChartHistory}
                       frequency={indicator.frequency}
                       unit={indicator.unit}
                       showOverlay={Boolean(indicator.overlays?.length)}
@@ -335,7 +349,7 @@ export function IndicatorTooltip({
                       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">
                         {section.label}
                       </p>
-                      <p className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">{indicator.tooltips[section.key]}</p>
+                      <p className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">{safeTooltips[section.key]}</p>
                     </section>
                   ))}
                 </div>
@@ -357,7 +371,7 @@ export function IndicatorTooltip({
                       <p className="mt-3 text-sm font-medium text-[color:var(--text-primary)]">{indicator.source.name}</p>
                     )}
                     <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-                      {indicator.release.sourceName ?? indicator.release.detail}
+                      {indicator.release?.sourceName ?? indicator.release?.detail ?? "Release metadata unavailable."}
                     </p>
                   </section>
 
@@ -365,10 +379,10 @@ export function IndicatorTooltip({
                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Release timing</p>
                     <div className="mt-3 flex items-center gap-2 text-[color:var(--text-muted)]">
                       <CalendarClock className="h-4 w-4" />
-                      {indicator.release.label}
+                      {indicator.release?.label ?? "Schedule"}
                     </div>
                     <p className="mt-2 text-sm text-[color:var(--text-primary)]">{nextLabel}</p>
-                    <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{indicator.releaseCadence}</p>
+                    <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{indicator.releaseCadence || "Cadence unavailable"}</p>
                   </section>
 
                   <section className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
@@ -398,7 +412,7 @@ export function IndicatorTooltip({
                 <section className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-strong)]">Workspace actions</p>
                   <div className="mt-4">
-                    <IndicatorWorkspaceActions slug={indicator.slug} name={indicator.name} visibleSlugs={visibleSlugs} />
+                    <IndicatorWorkspaceActions slug={indicator.slug} name={indicator.name} visibleSlugs={safeVisibleSlugs} />
                   </div>
                 </section>
               </div>

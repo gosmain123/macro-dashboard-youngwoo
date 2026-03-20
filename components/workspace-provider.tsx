@@ -60,6 +60,7 @@ function isSavedSnapshot(value: unknown): value is SavedSnapshot {
     typeof snapshot.id === "string" &&
     typeof snapshot.name === "string" &&
     typeof snapshot.path === "string" &&
+    snapshot.path.trim().startsWith("/") &&
     typeof snapshot.savedAt === "string" &&
     typeof snapshot.watchlistCount === "number" &&
     typeof snapshot.pinnedCount === "number"

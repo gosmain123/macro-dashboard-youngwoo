@@ -86,16 +86,28 @@ function classifyPercentile(percentile: number) {
 }
 
 function getWindowValues(history: MacroIndicator["chartHistory"], days: number) {
+  if (!Array.isArray(history) || history.length === 0) {
+    return [];
+  }
+
   const lastDate = history.at(-1)?.date;
 
   if (!lastDate) {
-    return history;
+    return history.filter(
+      (point) => point && typeof point.date === "string" && Number.isFinite(point.value)
+    );
   }
 
   const cutoff = new Date(`${lastDate}T00:00:00Z`);
   cutoff.setUTCDate(cutoff.getUTCDate() - days);
 
-  const filtered = history.filter((point) => new Date(`${point.date}T00:00:00Z`) >= cutoff);
+  const filtered = history.filter(
+    (point) =>
+      point &&
+      typeof point.date === "string" &&
+      Number.isFinite(point.value) &&
+      new Date(`${point.date}T00:00:00Z`) >= cutoff
+  );
   return filtered.length >= 6 ? filtered : history;
 }
 
@@ -145,8 +157,9 @@ export function getIndicatorSourceType(indicator: Pick<MacroIndicator, "slug" | 
 }
 
 export function getHistoricalContext(indicator: Pick<MacroIndicator, "chartHistory" | "currentValue">): HistoricalContextSummary {
-  const oneYearWindow = getWindowValues(indicator.chartHistory, 365);
-  const fiveYearWindow = getWindowValues(indicator.chartHistory, 365 * 5);
+  const chartHistory = Array.isArray(indicator.chartHistory) ? indicator.chartHistory : [];
+  const oneYearWindow = getWindowValues(chartHistory, 365);
+  const fiveYearWindow = getWindowValues(chartHistory, 365 * 5);
   const percentile = computePercentile(
     oneYearWindow.map((point) => point.value).filter((value) => Number.isFinite(value)),
     indicator.currentValue
@@ -159,9 +172,9 @@ export function getHistoricalContext(indicator: Pick<MacroIndicator, "chartHisto
 
   return {
     percentile,
-    percentileLabel: oneYearWindow.length !== indicator.chartHistory.length ? "1Y pct" : "History pct",
+    percentileLabel: oneYearWindow.length !== chartHistory.length ? "1Y pct" : "History pct",
     zScore,
-    zScoreLabel: fiveYearWindow.length !== indicator.chartHistory.length ? "5Y z" : "History z",
+    zScoreLabel: fiveYearWindow.length !== chartHistory.length ? "5Y z" : "History z",
     band: classified.band,
     contextLabel: classified.label
   };

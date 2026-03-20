@@ -4,6 +4,7 @@ import { AlertTriangle, BarChart3, Database } from "lucide-react";
 
 import { IndicatorCard } from "@/components/indicator-card";
 import { WorkspaceToolbar } from "@/components/workspace-toolbar";
+import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import { useWorkspace } from "@/components/workspace-provider";
 import type { LayerPagePayload } from "@/lib/layer-pages";
 
@@ -15,11 +16,18 @@ export function LayerDashboard({
   dataMode: "demo" | "live";
 }) {
   const { applyIndicatorPreferences } = useWorkspace();
-  const visibleIndicators = applyIndicatorPreferences(page.indicators);
-  const visibleSections = page.sections
+  const safePage = {
+    ...page,
+    indicators: Array.isArray(page?.indicators) ? page.indicators : [],
+    sections: Array.isArray(page?.sections) ? page.sections : [],
+    workflow: Array.isArray(page?.workflow) ? page.workflow : [],
+    cautions: Array.isArray(page?.cautions) ? page.cautions : []
+  };
+  const visibleIndicators = applyIndicatorPreferences(safePage.indicators);
+  const visibleSections = safePage.sections
     .map((section) => ({
       ...section,
-      indicators: applyIndicatorPreferences(section.indicators)
+      indicators: applyIndicatorPreferences(Array.isArray(section.indicators) ? section.indicators : [])
     }))
     .filter((section) => section.indicators.length > 0);
 
@@ -28,11 +36,11 @@ export function LayerDashboard({
       <section className="surface-card overflow-hidden rounded-[32px] p-6 md:p-8">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0 max-w-3xl">
-            <p className="section-kicker">{page.kicker}</p>
+            <p className="section-kicker">{safePage.kicker}</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[color:var(--text-primary)] md:text-4xl">
-              {page.title}
+              {safePage.title}
             </h1>
-            <p className="mt-3 text-base leading-7 text-[color:var(--text-secondary)]">{page.description}</p>
+            <p className="mt-3 text-base leading-7 text-[color:var(--text-secondary)]">{safePage.description}</p>
           </div>
 
           <div className="grid w-full gap-3 sm:grid-cols-3 xl:max-w-[34rem] xl:flex-none">
@@ -49,7 +57,7 @@ export function LayerDashboard({
                 Live mix
               </div>
               <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">
-                {page.liveCount} / {page.staleLiveCount} / {page.fallbackCount} / {page.errorCount}
+                {safePage.liveCount} / {safePage.staleLiveCount} / {safePage.fallbackCount} / {safePage.errorCount}
               </p>
               <p className="mt-1 text-xs text-[color:var(--text-muted)]">live / stale-live / fallback / error</p>
             </div>
@@ -59,7 +67,7 @@ export function LayerDashboard({
                 Sources
               </div>
               <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">
-                {page.officialCount} / {page.manualCount}
+                {safePage.officialCount} / {safePage.manualCount}
               </p>
               <p className="mt-1 text-xs text-[color:var(--text-muted)]">
                 {dataMode === "live" ? "Official / manual" : "Fallback remains explicit"}
@@ -83,12 +91,12 @@ export function LayerDashboard({
             <div className="space-y-3">
               <div className="surface-card rounded-[20px] p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--accent-strong)]">Goal</p>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{page.goal}</p>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{safePage.goal}</p>
               </div>
               <div className="surface-card rounded-[20px] p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--accent-strong)]">Workflow</p>
                 <div className="mt-3 space-y-2">
-                  {page.workflow.map((step, index) => (
+                  {safePage.workflow.map((step, index) => (
                     <p key={step} className="text-sm leading-6 text-[color:var(--text-secondary)]">
                       {index + 1}. {step}
                     </p>
@@ -100,7 +108,7 @@ export function LayerDashboard({
             <div className="surface-card rounded-[20px] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--accent-strong)]">Cautions</p>
               <div className="mt-3 space-y-2">
-                {page.cautions.map((caution) => (
+                {safePage.cautions.map((caution) => (
                   <p key={caution} className="text-sm leading-6 text-[color:var(--text-secondary)]">
                     {caution}
                   </p>
@@ -111,19 +119,40 @@ export function LayerDashboard({
         </details>
       </section>
 
-      <WorkspaceToolbar />
+      <WidgetErrorBoundary title="Workspace unavailable" description="Personalization controls failed to load, but the page content is still available.">
+        <WorkspaceToolbar />
+      </WidgetErrorBoundary>
+
+      {visibleSections.length === 0 ? (
+        <section className="surface-card rounded-[28px] p-5 md:p-6">
+          <p className="section-kicker">Fallback</p>
+          <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">No indicators are available right now.</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--text-secondary)]">
+            The route stayed mounted, but this layer has no usable cards after filtering and safety checks.
+          </p>
+        </section>
+      ) : null}
 
       {visibleSections.map((section) => (
         <section key={section.id} className="space-y-4">
           <div>
-            <p className="section-kicker">{page.title}</p>
+            <p className="section-kicker">{safePage.title}</p>
             <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{section.title}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[color:var(--text-secondary)]">{section.description}</p>
           </div>
 
           <div className="grid auto-rows-fr gap-4 xl:grid-cols-2">
             {section.indicators.map((indicator) => (
-              <IndicatorCard key={indicator.slug} indicator={indicator} visibleSlugs={section.indicators.map((entry) => entry.slug)} />
+              <WidgetErrorBoundary
+                key={indicator.slug}
+                title={`${indicator.name} is temporarily unavailable`}
+                description="One broken card should not take down the rest of the route."
+              >
+                <IndicatorCard
+                  indicator={indicator}
+                  visibleSlugs={section.indicators.map((entry) => entry.slug)}
+                />
+              </WidgetErrorBoundary>
             ))}
           </div>
         </section>
