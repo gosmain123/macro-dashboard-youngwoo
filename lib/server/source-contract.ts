@@ -335,26 +335,26 @@ function revisionDetection(provider: ProviderType) {
 }
 
 function buildPrimaryContract(indicator: MacroIndicator): IndicatorSourceEndpointContract {
-  if (indicator.slug === "ism-services") {
-    return {
-      provider: "ism",
-      resolver: "ism",
-      sourceName: indicator.source.name,
-      sourceUrl: indicator.source.url,
-      fetchMethod: "ism-release-page-scrape",
-      resolverSlug: indicator.slug
-    };
-  }
+ if (indicator.slug === "ism-services" && indicator.provider.type !== "manual") {
+  return {
+    provider: "ism",
+    resolver: "ism",
+    sourceName: indicator.source.name,
+    sourceUrl: indicator.source.url,
+    fetchMethod: "ism-release-page-scrape",
+    resolverSlug: indicator.slug
+  };
+}
 
-  if (indicator.slug === "gdp-nowcast") {
-    return {
-      provider: "fed",
-      resolver: "unimplemented",
-      sourceName: indicator.source.name,
-      sourceUrl: indicator.source.url,
-      fetchMethod: "not-yet-implemented"
-    };
-  }
+if (indicator.slug === "gdp-nowcast" && indicator.provider.type !== "manual") {
+  return {
+    provider: "fed",
+    resolver: "unimplemented",
+    sourceName: indicator.source.name,
+    sourceUrl: indicator.source.url,
+    fetchMethod: "not-yet-implemented"
+  };
+}
 
   return {
     provider: indicator.provider.type,
