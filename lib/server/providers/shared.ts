@@ -38,20 +38,34 @@ const monthLookup: Record<string, string> = {
   dec: "12"
 };
 
-export async function fetchText(url: string) {
-  const response = await fetch(url, {
-    headers: {
-      "user-agent": "macro-dashboard/1.0",
-      accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7"
-    },
-    next: { revalidate: 0 }
-  });
+export async function fetchText(url: string, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!response.ok) {
-    throw new Error(`Request failed for ${url}: ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "user-agent": "macro-dashboard/1.0",
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7"
+      },
+      next: { revalidate: 0 },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed for ${url}: ${response.status}`);
+    }
+
+    return await response.text();
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Request timed out for ${url}`);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return response.text();
 }
 
 export function decodeHtmlEntities(value: string) {
