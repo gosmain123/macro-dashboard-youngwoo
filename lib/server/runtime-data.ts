@@ -58,7 +58,45 @@ function getLatestIso(values: Array<string | undefined>) {
     .filter((value): value is string => Boolean(value))
     .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0];
 }
+function buildMinimalLiveHistory(
+  observedAt: string | null | undefined,
+  currentValue: number,
+  priorValue: number,
+  frequency: MacroIndicator["frequency"]
+) {
+  if (!observedAt) {
+    return [];
+  }
 
+  const currentDate = new Date(`${observedAt}T00:00:00Z`);
+
+  if (Number.isNaN(currentDate.getTime())) {
+    return [];
+  }
+
+  const priorDate = new Date(currentDate);
+
+  if (frequency === "Daily" || frequency === "Live") {
+    priorDate.setUTCDate(priorDate.getUTCDate() - 1);
+  } else if (frequency === "Weekly") {
+    priorDate.setUTCDate(priorDate.getUTCDate() - 7);
+  } else if (frequency === "Quarterly") {
+    priorDate.setUTCMonth(priorDate.getUTCMonth() - 3);
+  } else {
+    priorDate.setUTCMonth(priorDate.getUTCMonth() - 1);
+  }
+
+  return [
+    {
+      date: priorDate.toISOString().slice(0, 10),
+      value: priorValue
+    },
+    {
+      date: observedAt,
+      value: currentValue
+    }
+  ];
+}
 function buildFallbackIndicators(reason: string, now = new Date()) {
   return macroIndicators.map((indicator) => {
     const release = getIndicatorRelease(indicator.slug, indicator.frequency, indicator.releaseCadence, now);
@@ -191,16 +229,35 @@ export function mergeIndicatorsFromRuntime(snapshot: LiveRuntimeSnapshot, now = 
       latest?.source_url ??
       indicator.source.url;
     const currentValue = hasLiveCache ? Number(latest?.current_value) : indicator.currentValue;
-    const priorValue = hasLiveCache ? Number(latest?.prior_value) : indicator.priorValue;
-    const liveChartHistory = normalizeChartHistory(latest?.chart_history);
-    const fallbackChartHistory = normalizeChartHistory(indicator.chartHistory);
+const priorValue = hasLiveCache ? Number(latest?.prior_value) : indicator.priorValue;
+const liveChartHistory = normalizeChartHistory(latest?.chart_history);
+const fallbackChartHistory = normalizeChartHistory(indicator.chartHistory);
+
+const parseStatus = getSourcePayloadString(payload, "parse_status");
+const liveHistoryLooksSynthetic =
+  Boolean(parseStatus?.includes("seed-history-backfill")) ||
+  Boolean(parseStatus?.includes("minimal-history"));
+
+const minimalLiveHistory = buildMinimalLiveHistory(
+  latest?.observed_at,
+  currentValue,
+  priorValue,
+  indicator.frequency
+);
+
+const resolvedChartHistory =
+  !liveHistoryLooksSynthetic && liveChartHistory.length >= 2
+    ? liveChartHistory
+    : minimalLiveHistory.length >= 2
+      ? minimalLiveHistory
+      : fallbackChartHistory;
 
     return {
       ...indicator,
       currentValue,
       priorValue,
       change: Number((currentValue - priorValue).toFixed(2)),
-      chartHistory: liveChartHistory.length >= 2 ? liveChartHistory : fallbackChartHistory,
+      chartHistory: resolvedChartHistory,
       source: {
         ...indicator.source,
         name: sourceName,
