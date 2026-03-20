@@ -254,6 +254,169 @@ function formatStatusLabel(status: CalendarEvent["status"]) {
     .join(" ");
 }
 
+function parseMetricValue(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.replace(/,/g, "").match(/-?\d+(\.\d+)?/);
+
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number(normalized[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function detectValueUnit(value?: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  if (value.includes("%")) {
+    return "pp";
+  }
+
+  if (value.includes("bps")) {
+    return "bps";
+  }
+
+  if (value.includes("$tn")) {
+    return "$tn";
+  }
+
+  if (value.includes("$bn")) {
+    return "$bn";
+  }
+
+  if (value.includes("k")) {
+    return "k";
+  }
+
+  if (value.includes("m")) {
+    return "m";
+  }
+
+  return "";
+}
+
+function getInlineThreshold(unit: string) {
+  if (unit === "k") {
+    return 10;
+  }
+
+  if (unit === "pp" || unit === "m") {
+    return 0.05;
+  }
+
+  if (unit === "bps") {
+    return 1;
+  }
+
+  return 0.1;
+}
+
+function formatDifference(value: number, unit: string) {
+  const sign = value > 0 ? "+" : "";
+
+  if (unit === "k" || unit === "m" || unit === "pp") {
+    return `${sign}${value.toFixed(1)}${unit}`;
+  }
+
+  if (unit === "bps") {
+    return `${sign}${value.toFixed(0)} ${unit}`;
+  }
+
+  if (unit === "$bn" || unit === "$tn") {
+    return `${sign}${Math.abs(value).toFixed(2)} ${unit}`;
+  }
+
+  return `${sign}${value.toFixed(1)}`;
+}
+
+function getSurpriseMeta(event: CalendarEvent) {
+  if (event.status === "scheduled" || !event.actual) {
+    return {
+      value: "Pending",
+      detail: event.forecast ? "Waiting for actual" : "No live print yet",
+      tone: "slate" as const
+    };
+  }
+
+  if (!event.forecast) {
+    return {
+      value: "No preview",
+      detail: "Consensus unavailable",
+      tone: "slate" as const
+    };
+  }
+
+  const actual = parseMetricValue(event.actual);
+  const forecast = parseMetricValue(event.forecast);
+  const unit = detectValueUnit(event.actual ?? event.forecast);
+
+  if (actual === null || forecast === null) {
+    return {
+      value: "Unavailable",
+      detail: "Comparison unavailable",
+      tone: "slate" as const
+    };
+  }
+
+  const difference = actual - forecast;
+  const threshold = getInlineThreshold(unit);
+
+  if (Math.abs(difference) <= threshold) {
+    return {
+      value: "Inline",
+      detail: formatDifference(difference, unit),
+      tone: "amber" as const
+    };
+  }
+
+  return difference > 0
+    ? {
+        value: "Above",
+        detail: formatDifference(difference, unit),
+        tone: "emerald" as const
+      }
+    : {
+        value: "Below",
+        detail: formatDifference(difference, unit),
+        tone: "rose" as const
+      };
+}
+
+function isNumericRelease(event: CalendarEvent) {
+  const hasValueFields = Boolean(event.actual || event.forecast || event.previous || event.revisedPrevious);
+  return hasValueFields || event.category === "macro release" || event.category === "survey";
+}
+
+function getStructuredDetailFields(event: CalendarEvent) {
+  if (Array.isArray(event.detailFields) && event.detailFields.length > 0) {
+    return event.detailFields;
+  }
+
+  if (event.category === "central bank") {
+    return [
+      { label: "Release", value: "Policy text" },
+      { label: "Focus", value: "Tone / risk balance" },
+      { label: "Confirm", value: "2Y / real yields" }
+    ];
+  }
+
+  if (event.category === "auction") {
+    return [
+      { label: "Watch", value: "Bid-to-cover" },
+      { label: "Tail", value: "Stop vs when-issued" },
+      { label: "Confirm", value: "Cash yield reaction" }
+    ];
+  }
+
+  return [];
+}
+
 function EventPreview({
   event,
   onOpen
@@ -285,17 +448,56 @@ function DayEventDetail({
   event: CalendarEvent;
   highlighted: boolean;
 }) {
-  const detailRows = [
-    { label: "Actual", value: event.actual },
-    { label: "Forecast", value: event.forecast },
-    { label: "Previous", value: event.previous },
-    { label: "Revised prior", value: event.revisedPrevious }
-  ].filter((entry) => Boolean(entry.value));
+  const numericRelease = isNumericRelease(event);
+  const surprise = getSurpriseMeta(event);
+  const statRows = numericRelease
+    ? [
+        {
+          label: "Actual",
+          value: event.status === "scheduled" && !event.actual ? "Pending" : event.actual ?? "Unavailable",
+          detail: event.status === "scheduled" ? "Waiting for release" : "Latest print",
+          tone: event.status === "scheduled" ? ("slate" as const) : ("emerald" as const)
+        },
+        {
+          label: "Consensus",
+          value: event.forecast ?? "Unavailable",
+          detail: event.forecast ? "Street preview" : "No preview feed",
+          tone: "slate" as const
+        },
+        {
+          label: "Prior",
+          value: event.previous ?? "Unavailable",
+          detail: "Previous release",
+          tone: "slate" as const
+        },
+        ...(event.revisedPrevious
+          ? [
+              {
+                label: "Revised prior",
+                value: event.revisedPrevious,
+                detail: "Updated prior",
+                tone: "amber" as const
+              }
+            ]
+          : []),
+        {
+          label: "Surprise",
+          value: surprise.value,
+          detail: surprise.detail,
+          tone: surprise.tone
+        }
+      ]
+    : getStructuredDetailFields(event).map((field) => ({
+        label: field.label,
+        value: field.value,
+        detail: "Release focus",
+        tone: "slate" as const
+      }));
 
   return (
     <article
       className={cn(
-        "surface-inset min-w-0 overflow-hidden rounded-[24px] p-4",
+        "surface-inset min-w-0 overflow-hidden rounded-[24px] p-4 md:p-5",
         highlighted ? "border-[color:var(--accent-border)] shadow-[0_14px_30px_rgba(15,23,42,0.08)]" : ""
       )}
     >
@@ -307,8 +509,8 @@ function DayEventDetail({
             <MetaChip label="Status" value={formatStatusLabel(event.status)} tone={getStatusTone(event.status)} />
             <MetaChip label="Module" value={event.moduleLabel} tone="emerald" />
           </div>
-          <h3 className="mt-3 text-xl font-semibold text-[color:var(--text-primary)]">{event.title}</h3>
-          <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
+          <h3 className="mt-3 text-xl font-semibold text-[color:var(--text-primary)] md:text-2xl">{event.title}</h3>
+          <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">
             {formatReleaseLabel(event.date, event.timeLabel)} | {event.timezone}
           </p>
         </div>
@@ -318,23 +520,36 @@ function DayEventDetail({
         </div>
       </div>
 
-      {detailRows.length > 0 ? (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {detailRows.map((entry) => (
-            <div key={entry.label} className="rounded-2xl border border-[color:var(--border-soft)] bg-white/85 p-3">
+      {statRows.length > 0 ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {statRows.map((entry) => (
+            <div
+              key={entry.label}
+              className={cn(
+                "rounded-[20px] border p-3.5",
+                entry.tone === "emerald"
+                  ? "border-emerald-200 bg-emerald-50"
+                  : entry.tone === "amber"
+                    ? "border-amber-200 bg-amber-50"
+                    : entry.tone === "rose"
+                      ? "border-rose-200 bg-rose-50"
+                      : "border-[color:var(--border-soft)] bg-white"
+              )}
+            >
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{entry.label}</p>
-              <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">{entry.value}</p>
+              <p className="mt-2 text-xl font-semibold leading-none text-[color:var(--text-primary)]">{entry.value}</p>
+              <p className="mt-2 text-xs text-[color:var(--text-secondary)]">{entry.detail}</p>
             </div>
           ))}
         </div>
       ) : null}
 
-      <div className="mt-4 grid gap-3 xl:grid-cols-2">
-        <div className="rounded-2xl border border-[color:var(--border-soft)] bg-white/80 p-4">
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-[20px] border border-[color:var(--border-soft)] bg-white/80 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent-strong)]">Why this matters</p>
           <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{event.whyItMatters}</p>
         </div>
-        <div className="rounded-2xl border border-[color:var(--border-soft)] bg-white/80 p-4">
+        <div className="rounded-[20px] border border-[color:var(--border-soft)] bg-white/80 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent-strong)]">What to confirm next</p>
           <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{event.whatToConfirmNext}</p>
         </div>

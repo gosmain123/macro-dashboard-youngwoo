@@ -47,6 +47,7 @@ export type ModuleHealthStatus = "healthy" | "degraded" | "down";
 export type WorkflowReleaseState = "pending-release" | "schedule-pending";
 export type WorkflowPreviewState = "connected" | "preview-feed-missing";
 export type CalendarEventStatus = "scheduled" | "released" | "revised" | "delayed" | "canceled";
+export type CalendarEventSurprise = "above" | "inline" | "below" | "pending";
 
 export interface IndicatorTooltip {
   definition: string;
@@ -164,6 +165,10 @@ export interface CalendarEvent {
   forecast?: string | null;
   previous?: string | null;
   revisedPrevious?: string | null;
+  detailFields?: Array<{
+    label: string;
+    value: string;
+  }>;
   whyItMatters: string;
   whatToConfirmNext: string;
   whatToWatch?: string;

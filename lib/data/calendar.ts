@@ -31,6 +31,7 @@ type EventSeed = {
   whatToConfirmNext: string;
   indicatorSlug?: string;
   values?: EventValueFields;
+  detailFields?: CalendarEvent["detailFields"];
   status?: CalendarEventStatus;
 };
 
@@ -323,24 +324,27 @@ function resolveIndicatorValues(date: string, indicatorSlug?: string, overrides?
 
   const indicator = indicatorBySlug.get(indicatorSlug);
   const snapshot = snapshotByKey.get(`${indicatorSlug}:${date}`);
+  const today = getEasternToday();
 
-  if (!indicator || !snapshot) {
+  if (!indicator) {
     return baseValues;
   }
 
   return {
-    actual: baseValues.actual ?? formatIndicatorValue(indicator.currentValue, indicator.unit),
+    actual:
+      baseValues.actual ??
+      (date <= today ? formatIndicatorValue(indicator.currentValue, indicator.unit) : undefined),
     forecast:
       baseValues.forecast ??
-      (typeof snapshot.consensusValue === "number" ? formatIndicatorValue(snapshot.consensusValue, indicator.unit) : undefined),
+      (typeof snapshot?.consensusValue === "number" ? formatIndicatorValue(snapshot.consensusValue, indicator.unit) : undefined),
     previous:
       baseValues.previous ??
-      (typeof snapshot.revisedFrom === "number"
+      (typeof snapshot?.revisedFrom === "number"
         ? formatIndicatorValue(snapshot.revisedFrom, indicator.unit)
         : formatIndicatorValue(indicator.priorValue, indicator.unit)),
     revisedPrevious:
       baseValues.revisedPrevious ??
-      (typeof snapshot.revisedTo === "number" ? formatIndicatorValue(snapshot.revisedTo, indicator.unit) : undefined)
+      (typeof snapshot?.revisedTo === "number" ? formatIndicatorValue(snapshot.revisedTo, indicator.unit) : undefined)
   };
 }
 
@@ -386,6 +390,7 @@ function makeEvent(seed: EventSeed): CalendarEvent {
     forecast: values.forecast,
     previous: values.previous,
     revisedPrevious: values.revisedPrevious,
+    detailFields: seed.detailFields,
     whyItMatters: seed.whyItMatters,
     whatToConfirmNext: seed.whatToConfirmNext,
     whatToWatch: seed.whatToConfirmNext,
@@ -674,6 +679,11 @@ export const calendarEvents = sortEvents([
       module: modules.policy,
       flow: flows.rates,
       source: sources.fomcSchedule,
+      detailFields: [
+        { label: "Decision", value: "Rate statement" },
+        { label: "Statement", value: "2:00 PM ET" },
+        { label: "Press conference", value: "2:30 PM ET" }
+      ],
       whyItMatters: policyWhy,
       whatToConfirmNext: policyConfirm
     })
@@ -688,6 +698,11 @@ export const calendarEvents = sortEvents([
       module: modules.policy,
       flow: flows.rates,
       source: sources.fedCalendar,
+      detailFields: [
+        { label: "Document", value: "Meeting minutes" },
+        { label: "Focus", value: "Risk balance" },
+        { label: "Market check", value: "2Y / real yields" }
+      ],
       whyItMatters:
         "Minutes show whether the statement understated or overstated the real balance of risks inside the Fed.",
       whatToConfirmNext: policyConfirm
@@ -703,6 +718,11 @@ export const calendarEvents = sortEvents([
       module: modules.policy,
       flow: flows.rates,
       source: sources.fomcSchedule,
+      detailFields: [
+        { label: "Dots", value: "Terminal path" },
+        { label: "Projections", value: "Growth / inflation" },
+        { label: "Press conference", value: "2:30 PM ET" }
+      ],
       whyItMatters:
         "SEP meetings matter because the dot plot and projections can re-anchor terminal-rate pricing in one afternoon.",
       whatToConfirmNext:
@@ -716,6 +736,11 @@ export const calendarEvents = sortEvents([
     module: modules.policy,
     flow: flows.growth,
     source: sources.fedCalendar,
+    detailFields: [
+      { label: "Format", value: "Regional anecdotes" },
+      { label: "Coverage", value: "12 Fed districts" },
+      { label: "Use", value: "Growth / pricing tone" }
+    ],
     whyItMatters:
       "The Beige Book gives a qualitative read on regional activity, labor tightness, pricing power, and business caution ahead of the next Fed meeting.",
     whatToConfirmNext:
@@ -892,6 +917,11 @@ export const calendarEvents = sortEvents([
     module: modules.rates,
     flow: flows.rates,
     source: sources.treasuryAuctions,
+    detailFields: [
+      { label: "Watch", value: "Bid-to-cover" },
+      { label: "Tail", value: "Auction stop" },
+      { label: "Confirm", value: "2Y / SOFR path" }
+    ],
     whyItMatters:
       "3Y auction demand is a quick check on front-end duration appetite and how comfortable the market is with the near-term policy path.",
     whatToConfirmNext:
@@ -904,6 +934,11 @@ export const calendarEvents = sortEvents([
     module: modules.rates,
     flow: flows.rates,
     source: sources.treasuryAuctions,
+    detailFields: [
+      { label: "Watch", value: "Bid-to-cover" },
+      { label: "Tail", value: "Long-end demand" },
+      { label: "Indirects", value: "Real-money appetite" }
+    ],
     whyItMatters:
       "The 10Y auction sits at the center of term premium, mortgage transmission, and equity discount-rate pressure.",
     whatToConfirmNext:
@@ -916,6 +951,11 @@ export const calendarEvents = sortEvents([
     module: modules.rates,
     flow: flows.rates,
     source: sources.treasuryAuctions,
+    detailFields: [
+      { label: "Watch", value: "Bid-to-cover" },
+      { label: "Tail", value: "Duration appetite" },
+      { label: "Indirects", value: "Pension demand" }
+    ],
     whyItMatters:
       "30Y auction demand is the cleanest monthly check on long-end duration appetite and pension-heavy demand.",
     whatToConfirmNext:
