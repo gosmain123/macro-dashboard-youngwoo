@@ -30,7 +30,7 @@ const blueprints: IndicatorBlueprint[] = [
     signalScore: 0.8,
     tone: "positive",
     releaseCadence: "Updated after major source releases",
-    provider: { type: "fed" },
+    provider: { type: "manual" },
     trendSlope: 0.03,
     volatility: 0.04,
     minValue: -3,
