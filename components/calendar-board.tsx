@@ -14,7 +14,6 @@ type ViewMode = "month" | "week";
 type CalendarDay = {
   key: string;
   date: Date;
-  inCurrentMonth: boolean;
   isToday: boolean;
   events: CalendarEvent[];
 };
@@ -159,20 +158,33 @@ function buildEventsByDate(events: CalendarEvent[]) {
 
 function buildMonthDays(anchorDate: Date, eventsByDate: Map<string, CalendarEvent[]>, todayKey: string) {
   const monthStart = getMonthStart(anchorDate);
-  const gridStart = addDays(monthStart, -monthStart.getUTCDay());
+  const daysInMonth = getUtcDate(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0).getUTCDate();
+  const leadingEmptyDays = monthStart.getUTCDay();
+  const cells: Array<CalendarDay | null> = [];
 
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = addDays(gridStart, index);
+  for (let index = 0; index < leadingEmptyDays; index += 1) {
+    cells.push(null);
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = getUtcDate(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), day);
     const key = toDateKey(date);
 
-    return {
+    cells.push({
       key,
       date,
-      inCurrentMonth: date.getUTCMonth() === monthStart.getUTCMonth(),
       isToday: key === todayKey,
       events: eventsByDate.get(key) ?? []
-    } satisfies CalendarDay;
-  });
+    } satisfies CalendarDay);
+  }
+
+  const trailingEmptyDays = (7 - (cells.length % 7)) % 7;
+
+  for (let index = 0; index < trailingEmptyDays; index += 1) {
+    cells.push(null);
+  }
+
+  return cells;
 }
 
 function buildWeekDays(anchorDate: Date, eventsByDate: Map<string, CalendarEvent[]>, todayKey: string) {
@@ -185,7 +197,6 @@ function buildWeekDays(anchorDate: Date, eventsByDate: Map<string, CalendarEvent
     return {
       key,
       date,
-      inCurrentMonth: true,
       isToday: key === todayKey,
       events: eventsByDate.get(key) ?? []
     } satisfies CalendarDay;
@@ -220,6 +231,29 @@ function getDayTone(events: CalendarEvent[]) {
   return "slate" as const;
 }
 
+function getStatusTone(status: CalendarEvent["status"]) {
+  if (status === "released") {
+    return "emerald" as const;
+  }
+
+  if (status === "revised") {
+    return "amber" as const;
+  }
+
+  if (status === "delayed" || status === "canceled") {
+    return "rose" as const;
+  }
+
+  return "slate" as const;
+}
+
+function formatStatusLabel(status: CalendarEvent["status"]) {
+  return status
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 function EventPreview({
   event,
   onOpen
@@ -236,7 +270,9 @@ function EventPreview({
       <span className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", getImportanceDotClassName(event.importance))} />
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-[color:var(--text-primary)]">{event.title}</p>
-        <p className="mt-0.5 text-xs text-[color:var(--text-muted)]">{event.timeLabel}</p>
+        <p className="mt-0.5 text-xs text-[color:var(--text-muted)]">
+          {event.timeLabel} | {event.importance}
+        </p>
       </div>
     </button>
   );
@@ -249,6 +285,13 @@ function DayEventDetail({
   event: CalendarEvent;
   highlighted: boolean;
 }) {
+  const detailRows = [
+    { label: "Actual", value: event.actual },
+    { label: "Forecast", value: event.forecast },
+    { label: "Previous", value: event.previous },
+    { label: "Revised prior", value: event.revisedPrevious }
+  ].filter((entry) => Boolean(entry.value));
+
   return (
     <article
       className={cn(
@@ -261,16 +304,30 @@ function DayEventDetail({
           <div className="flex flex-wrap gap-2">
             <MetaChip label="Importance" value={event.importance} tone={getImportanceTone(event.importance)} />
             <MetaChip label="Type" value={event.category} tone="slate" />
+            <MetaChip label="Status" value={formatStatusLabel(event.status)} tone={getStatusTone(event.status)} />
             <MetaChip label="Module" value={event.moduleLabel} tone="emerald" />
           </div>
           <h3 className="mt-3 text-xl font-semibold text-[color:var(--text-primary)]">{event.title}</h3>
-          <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{formatReleaseLabel(event.date, event.timeLabel)}</p>
+          <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
+            {formatReleaseLabel(event.date, event.timeLabel)} | {event.timezone}
+          </p>
         </div>
         <div className="flex items-center gap-2 text-[color:var(--text-muted)]">
           <CalendarClock className="h-4 w-4" />
           {formatDayLabel(parseDateKey(event.date))}
         </div>
       </div>
+
+      {detailRows.length > 0 ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {detailRows.map((entry) => (
+            <div key={entry.label} className="rounded-2xl border border-[color:var(--border-soft)] bg-white/85 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{entry.label}</p>
+              <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">{entry.value}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
         <div className="rounded-2xl border border-[color:var(--border-soft)] bg-white/80 p-4">
@@ -279,11 +336,11 @@ function DayEventDetail({
         </div>
         <div className="rounded-2xl border border-[color:var(--border-soft)] bg-white/80 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent-strong)]">What to confirm next</p>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{event.whatToWatch}</p>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{event.whatToConfirmNext}</p>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-3 lg:grid-cols-3">
         <Link
           href={event.moduleHref}
           className="soft-button flex items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-sm font-medium transition"
@@ -304,6 +361,18 @@ function DayEventDetail({
           </span>
           <ExternalLink className="h-4 w-4 shrink-0 text-[color:var(--accent-strong)]" />
         </Link>
+        <a
+          href={event.sourceUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="soft-button flex items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-sm font-medium transition"
+        >
+          <span>
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">Source</span>
+            <span className="mt-1 block text-[color:var(--text-primary)]">{event.sourceName}</span>
+          </span>
+          <ExternalLink className="h-4 w-4 shrink-0 text-[color:var(--accent-strong)]" />
+        </a>
       </div>
     </article>
   );
@@ -380,10 +449,10 @@ export function CalendarBoard({
         <section className="surface-card rounded-[34px] p-6 md:p-8">
           <p className="section-kicker">Economic Calendar</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[color:var(--text-primary)]">
-            See the month first, then open the day that matters
+            Read one month of macro risk in a single pass
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-[color:var(--text-secondary)]">
-            Each day shows the key events first. Open a date only when you need the full market context and follow-up path.
+            The main grid stays compact: date, event count, and the 1-2 releases that matter most. Open a day only when you need the full release context.
           </p>
         </section>
 
@@ -457,7 +526,11 @@ export function CalendarBoard({
               </div>
 
               <div className="mt-2 grid grid-cols-7 gap-2">
-                {days.map((day) => {
+                {days.map((day, index) => {
+                  if (!day) {
+                    return <div key={`empty-${index}`} className="min-h-[10.5rem] rounded-[22px] bg-transparent" aria-hidden="true" />;
+                  }
+
                   const previewEvents = day.events.slice(0, 2);
                   const moreCount = Math.max(day.events.length - previewEvents.length, 0);
                   const tone = getDayTone(day.events);
@@ -467,16 +540,14 @@ export function CalendarBoard({
                       key={day.key}
                       className={cn(
                         "flex min-h-[11rem] min-w-0 flex-col overflow-hidden rounded-[22px] border p-3",
-                        day.inCurrentMonth ? "bg-white" : "bg-[color:var(--surface-muted)]",
+                        "bg-white",
                         day.isToday ? "border-[color:var(--accent-border)]" : "border-[color:var(--border-soft)]"
                       )}
                     >
                       <button type="button" onClick={() => openDay(day.key)} className="w-full text-left">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className={cn("text-sm font-semibold", day.inCurrentMonth ? "text-[color:var(--text-primary)]" : "text-[color:var(--text-muted)]")}>
-                              {day.date.getUTCDate()}
-                            </p>
+                            <p className="text-sm font-semibold text-[color:var(--text-primary)]">{day.date.getUTCDate()}</p>
                             <p className="mt-1 text-xs text-[color:var(--text-muted)]">
                               {day.events.length > 0 ? `${day.events.length} event${day.events.length === 1 ? "" : "s"}` : "No key events"}
                             </p>

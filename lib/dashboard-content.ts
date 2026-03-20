@@ -16,13 +16,6 @@ const homepageWatchlistSlugs = [
   "hy-spreads",
   "dxy"
 ] as const;
-const homepageEventIds = new Set([
-  "fomc-may",
-  "pce-release",
-  "nfp-release",
-  "cpi-release",
-  "ppi-release"
-]);
 
 export function buildDashboardPayload(
   dataMode: "demo" | "live",
@@ -46,6 +39,29 @@ export function buildDashboardPayload(
     .map((slug) => resolvedIndicators.find((indicator) => indicator.slug === slug))
     .filter((indicator): indicator is MacroIndicator => Boolean(indicator));
   const regimeCards = deriveRegimeCards(resolvedIndicators);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const upcomingKeyEvents = calendarEvents
+    .filter((event) => event.date >= todayKey)
+    .sort((left, right) => {
+      const importanceRank = (value: "high" | "medium" | "low") => {
+        if (value === "high") {
+          return 3;
+        }
+
+        if (value === "medium") {
+          return 2;
+        }
+
+        return 1;
+      };
+
+      return (
+        left.date.localeCompare(right.date) ||
+        importanceRank(right.importance) - importanceRank(left.importance) ||
+        left.timeLabel.localeCompare(right.timeLabel)
+      );
+    })
+    .slice(0, 5);
 
   return {
     dataMode,
@@ -58,10 +74,7 @@ export function buildDashboardPayload(
     playbooks,
     homepage: {
       watchlist,
-      keyEvents: calendarEvents
-        .filter((event) => homepageEventIds.has(event.id))
-        .sort((left, right) => left.date.localeCompare(right.date))
-        .slice(0, 5),
+      keyEvents: upcomingKeyEvents,
       freshness: {
         lastUpdated,
         refreshCadence,

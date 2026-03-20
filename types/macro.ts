@@ -46,6 +46,7 @@ export type ReleaseSurpriseFlag = "above" | "below" | "inline" | "pending";
 export type ModuleHealthStatus = "healthy" | "degraded" | "down";
 export type WorkflowReleaseState = "pending-release" | "schedule-pending";
 export type WorkflowPreviewState = "connected" | "preview-feed-missing";
+export type CalendarEventStatus = "scheduled" | "released" | "revised" | "delayed" | "canceled";
 
 export interface IndicatorTooltip {
   definition: string;
@@ -150,12 +151,22 @@ export interface CalendarEvent {
   moduleHref: string;
   playbookLabel: string;
   playbookHref: string;
-  category: "macro release" | "central bank" | "auction" | "filing" | "liquidity";
+  category: "macro release" | "central bank" | "auction" | "survey" | "credit" | "liquidity";
   date: string;
   timeLabel: string;
+  timezone: string;
+  country: string;
   importance: "high" | "medium" | "low";
+  sourceName: string;
+  sourceUrl: string;
+  status: CalendarEventStatus;
+  actual?: string | null;
+  forecast?: string | null;
+  previous?: string | null;
+  revisedPrevious?: string | null;
   whyItMatters: string;
-  whatToWatch: string;
+  whatToConfirmNext: string;
+  whatToWatch?: string;
 }
 
 export interface PlaybookScenario {
