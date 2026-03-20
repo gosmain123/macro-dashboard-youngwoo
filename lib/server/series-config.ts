@@ -59,6 +59,6 @@ export const seriesConfigBySlug: Record<string, SeriesConfig> = {
   "mortgage-rates": { seriesId: "MORTGAGE30US", transform: "level", limit: 48 },
   "ten-year-real-yield": { seriesId: "DFII10", transform: "level", limit: 48 },
   "wti-oil": { seriesId: "DCOILWTICO", transform: "level", limit: 48 },
-  gold: { seriesId: "GOLDAMGBD228NLBM", transform: "level", limit: 48 }
+  gold: { seriesId: "GOLDAMGBD228NLBM", transform: "level", limit: 48 },
   vix: { seriesId: "VIXCLS", transform: "level", limit: 48 },
 };
