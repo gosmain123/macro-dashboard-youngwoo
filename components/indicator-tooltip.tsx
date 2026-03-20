@@ -1,13 +1,14 @@
 "use client";
 
 import { CalendarClock, ExternalLink, Info, MoveUpRight, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { FollowUpLogicCard } from "@/components/follow-up-logic-card";
 import { IndicatorActionLinks } from "@/components/indicator-action-links";
 import { MetaChip } from "@/components/meta-chip";
 import { SparklineChart } from "@/components/sparkline-chart";
+import { normalizeChartHistory } from "@/lib/chart-data";
 import { getHistoricalContext, getIndicatorSourceType } from "@/lib/indicator-insight";
 import { getFollowUpLogic } from "@/lib/playbook-guide";
 import { cn, formatFreshnessAge, formatIndicatorValue, formatReleaseLabel, formatTimestamp, titleCase } from "@/lib/utils";
@@ -72,7 +73,7 @@ export function IndicatorTooltip({
     howToUse: indicator.tooltips?.howToUse?.trim() || "Usage notes are unavailable.",
     whatToWatch: indicator.tooltips?.whatToWatch?.trim() || "Follow-up checks are unavailable."
   };
-  const safeChartHistory = Array.isArray(indicator.chartHistory) ? indicator.chartHistory : [];
+  const safeChartHistory = useMemo(() => normalizeChartHistory(indicator.chartHistory), [indicator.chartHistory]);
   const followUpLogic = getFollowUpLogic(indicator.slug);
   const sourceType = getIndicatorSourceType(indicator);
   const context = getHistoricalContext({

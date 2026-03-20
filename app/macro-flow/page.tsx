@@ -5,7 +5,7 @@ export const revalidate = 60;
 
 export const metadata = {
   title: "Macro Flow | Macro Signal Deck",
-  description: "A visual decision map for reading macro, connecting indicators, and building a tentative view."
+  description: "A market-logic manual for connecting macro releases to rates, USD, spreads, volatility, and asset views."
 };
 
 export default async function MacroFlowPage() {

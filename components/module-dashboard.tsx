@@ -3,7 +3,9 @@
 import { BarChart3, Database } from "lucide-react";
 
 import { IndicatorCard } from "@/components/indicator-card";
+import { MiniLogicMap } from "@/components/mini-logic-map";
 import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
+import { getMiniLogicMapForModule } from "@/lib/macro-flow";
 import type { MacroIndicator, MacroModule } from "@/types/macro";
 
 export function ModuleDashboard({
@@ -21,6 +23,7 @@ export function ModuleDashboard({
   const staleLive = visibleIndicators.filter((indicator) => indicator.dataStatus === "stale-live").length;
   const fallback = visibleIndicators.filter((indicator) => indicator.dataStatus === "fallback").length;
   const error = visibleIndicators.filter((indicator) => indicator.dataStatus === "error").length;
+  const logicMap = getMiniLogicMapForModule(module.slug);
 
   return (
     <div className="min-w-0 space-y-6">
@@ -65,6 +68,8 @@ export function ModuleDashboard({
           </div>
         </div>
       </section>
+
+      {logicMap ? <MiniLogicMap map={logicMap} /> : null}
 
       <section className="grid auto-rows-fr gap-4 xl:grid-cols-2">
         {visibleIndicators.map((indicator) => (

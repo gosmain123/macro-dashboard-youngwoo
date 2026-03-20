@@ -3,7 +3,9 @@
 import { AlertTriangle, BarChart3, Database } from "lucide-react";
 
 import { IndicatorCard } from "@/components/indicator-card";
+import { MiniLogicMap } from "@/components/mini-logic-map";
 import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
+import { getMiniLogicMapForLayer } from "@/lib/macro-flow";
 import type { LayerPagePayload } from "@/lib/layer-pages";
 
 export function LayerDashboard({
@@ -27,6 +29,7 @@ export function LayerDashboard({
       indicators: Array.isArray(section.indicators) ? section.indicators : []
     }))
     .filter((section) => section.indicators.length > 0);
+  const logicMap = getMiniLogicMapForLayer(page.slug);
 
   return (
     <div className="min-w-0 space-y-6">
@@ -115,6 +118,8 @@ export function LayerDashboard({
           </div>
         </details>
       </section>
+
+      {logicMap ? <MiniLogicMap map={logicMap} /> : null}
 
       {visibleSections.length === 0 ? (
         <section className="surface-card rounded-[28px] p-5 md:p-6">

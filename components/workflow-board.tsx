@@ -31,10 +31,10 @@ import type {
 type WorkflowTabId = "release-radar" | "surprises" | "headlines" | "changes";
 
 const tabs: Array<{ id: WorkflowTabId; label: string; icon: ComponentType<{ className?: string }> }> = [
-  { id: "release-radar", label: "Release Radar", icon: Radar },
-  { id: "surprises", label: "Surprises & Revisions", icon: TrendingUp },
+  { id: "release-radar", label: "Upcoming", icon: Radar },
+  { id: "surprises", label: "Released", icon: TrendingUp },
   { id: "headlines", label: "Headlines", icon: Newspaper },
-  { id: "changes", label: "What Changed", icon: Sparkles }
+  { id: "changes", label: "Board Changes", icon: Sparkles }
 ];
 
 function statusTone(status: WorkflowReleaseRadarItem["status"]) {
@@ -581,28 +581,79 @@ function ChangesTab({ items }: { items: WorkflowChangeItem[] }) {
 }
 
 export function WorkflowBoard({ payload }: { payload: WorkflowPayload }) {
-  const [activeTab, setActiveTab] = useState<WorkflowTabId>("release-radar");
+  const [activeTab, setActiveTab] = useState<WorkflowTabId>(payload.surprises.length > 0 ? "surprises" : "release-radar");
   const nextRelease = payload.releaseRadar[0];
+  const topSurprise = payload.surprises[0];
+  const topChange = payload.changes[0];
 
   return (
     <div className="min-w-0 space-y-8">
       <section className="surface-card min-w-0 overflow-hidden rounded-[34px] p-6 md:p-8">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-200">Workflow</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">Daily macro workflow</h1>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">Daily execution board</h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300">
-            See the weekly tone first, then open the day that matters and confirm the move in the next part of the dashboard.
+            Start here when you want today’s releases, surprises, revisions, and the next confirmation check. Use Macro Flow when you want the deeper why behind the move.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <MetaChip label="Updated" value={formatTimestamp(payload.updatedAt)} tone="slate" />
             <MetaChip label="Next on deck" value={nextRelease?.indicatorName ?? "Schedule pending"} tone="cyan" className="max-w-full" />
-            <MetaChip label="Trust" value="Visible" tone="emerald" />
-            <MetaChip label="Preview gap" value="Explicit" tone="amber" />
+            <MetaChip label="Execution" value="Today first" tone="emerald" />
+            <MetaChip label="Deep logic" value="Macro Flow" tone="amber" />
           </div>
           <p className="mt-3 text-sm text-slate-300">
             {nextRelease ? formatReleaseLabel(nextRelease.nextReleaseDate, nextRelease.timeLabel) : "No event scheduled right now."}
           </p>
         </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-4">
+        <article className="surface-card rounded-[28px] p-5">
+          <p className="section-kicker">On deck</p>
+          <h2 className="mt-2 text-xl font-semibold text-[color:var(--text-primary)]">
+            {nextRelease?.indicatorName ?? "Schedule pending"}
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+            {nextRelease ? formatReleaseLabel(nextRelease.nextReleaseDate, nextRelease.timeLabel) : "Open Calendar for the next scheduled release."}
+          </p>
+        </article>
+
+        <article className="surface-card rounded-[28px] p-5">
+          <p className="section-kicker">Latest surprise</p>
+          <h2 className="mt-2 text-xl font-semibold text-[color:var(--text-primary)]">
+            {topSurprise?.indicatorName ?? "No fresh surprise"}
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+            {topSurprise
+              ? `${topSurprise.surpriseFlag} surprise | ${formatIndicatorValue(topSurprise.actualValue, topSurprise.unit)} vs ${formatOptionalValue(topSurprise.consensusValue, topSurprise.unit)}`
+              : "Fresh released data will appear here once a tracked event lands."}
+          </p>
+        </article>
+
+        <article className="surface-card rounded-[28px] p-5">
+          <p className="section-kicker">Confirm now</p>
+          <h2 className="mt-2 text-xl font-semibold text-[color:var(--text-primary)]">
+            {topSurprise?.whatToConfirmNext ?? nextRelease?.whatToConfirmNext ?? "Rates, credit, and the related module"}
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+            {topChange?.detail ?? "Use the heatmap first, then open the relevant release row and confirm the move in rates and credit."}
+          </p>
+        </article>
+
+        <article className="surface-card rounded-[28px] p-5">
+          <p className="section-kicker">Need the why?</p>
+          <h2 className="mt-2 text-xl font-semibold text-[color:var(--text-primary)]">Open Macro Flow</h2>
+          <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+            Macro Flow explains how the release should travel into rates, USD, spreads, volatility, and asset leadership.
+          </p>
+          <Link
+            href="/macro-flow"
+            className="soft-button-accent mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition"
+          >
+            Go to Macro Flow
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </article>
       </section>
 
       <section className="space-y-5">
