@@ -81,11 +81,12 @@ function parseFredCsv(text: string): FredObservation[] {
       const date = line.slice(0, commaIndex).trim();
       const rawValue = line.slice(commaIndex + 1).trim().replace(/^"|"$/g, "");
 
-      if (!date || rawValue === "." || rawValue === "") {
-        return null;
-      }
+if (!date || rawValue === "." || rawValue === "") {
+  return null;
+}
 
-      const value = Number(rawValue);
+const normalizedRawValue = rawValue.replace(/,/g, "");
+const value = Number(normalizedRawValue);
 
       if (!Number.isFinite(value)) {
         return null;
