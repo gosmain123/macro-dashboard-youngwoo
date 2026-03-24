@@ -7,6 +7,7 @@ import { SparklineChart } from "@/components/sparkline-chart";
 import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import { cn, formatIndicatorValue } from "@/lib/utils";
 import type { MacroIndicator } from "@/types/macro";
+import { LiveMarketHistoryChart } from "@/components/live-market-history-chart";
 
 function statusTone(status: MacroIndicator["status"]) {
   if (status === "live") {
@@ -66,15 +67,19 @@ export function IndicatorCard({
       </p>
 
       <div className="surface-inset mt-4 overflow-hidden rounded-[20px] px-3 py-2">
-        <WidgetErrorBoundary compact title="Chart unavailable" description="This card is still usable without the mini chart.">
-          <SparklineChart
-            data={safeChartHistory}
-            frequency={indicator.frequency}
-            unit={indicator.unit}
-            showOverlay={Boolean(indicator.overlays?.length)}
-            variant="compact"
-          />
-        </WidgetErrorBoundary>
+<WidgetErrorBoundary compact title="Chart unavailable" description="This card is still usable without the mini chart.">
+  {indicator.slug === "gold" && indicator.status === "live" ? (
+    <LiveMarketHistoryChart symbol="gold" unit={indicator.unit} variant="compact" />
+  ) : (
+    <SparklineChart
+      data={safeChartHistory}
+      frequency={indicator.frequency}
+      unit={indicator.unit}
+      showOverlay={Boolean(indicator.overlays?.length)}
+      variant="compact"
+    />
+  )}
+</WidgetErrorBoundary>
       </div>
 
       <div className="mt-3">
