@@ -109,13 +109,13 @@ export function formatTimestamp(value: string) {
     return "Unavailable";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("en-SG", {
     month: "short",
     day: "numeric",
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: "Asia/Singapore",
     timeZoneName: "short"
   }).format(parsed);
 }
