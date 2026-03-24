@@ -3,6 +3,8 @@
 import { MetaChip } from "@/components/meta-chip";
 import { cn } from "@/lib/utils";
 import { useMarketQuote } from "@/lib/hooks/use-market-quote";
+import { SparklineChart } from "@/components/sparkline-chart";
+import { useMarketBars } from "@/lib/hooks/use-market-bars";
 
 function valueTone() {
   return "text-[color:var(--text-primary)]";
@@ -10,6 +12,7 @@ function valueTone() {
 
 export function LiveGoldQuote() {
   const { data, loading, error } = useMarketQuote("gold", 15000);
+  const { data: barsData } = useMarketBars("gold", 180, 60000);
 
   if (loading) {
     return (
@@ -36,9 +39,15 @@ export function LiveGoldQuote() {
           Pulling the latest market live gold quote.
         </p>
 
-        <div className="surface-inset mt-4 flex min-h-[7.5rem] items-center justify-center rounded-[20px] px-3 py-2 text-sm text-[color:var(--text-muted)]">
-          Chart loading...
-        </div>
+      <div className="surface-inset mt-4 overflow-hidden rounded-[20px] px-3 py-2">
+  <SparklineChart
+    data={barsData?.points ?? []}
+    frequency="Daily"
+    unit="usd/oz"
+    showOverlay={false}
+    variant="compact"
+  />
+</div>
       </article>
     );
   }
