@@ -35,14 +35,22 @@ const chartRangeConfig: Record<
     options: ChartRangeOption[];
   }
 > = {
-   intraday: {
-    defaultRange: "4H",
-    historyPointTarget: 390,
+  intraday: {
+    defaultRange: "1D",
+    historyPointTarget: 365 * 20,
     options: [
       { id: "1H", label: "1H" },
       { id: "4H", label: "4H" },
       { id: "1D", label: "1D" },
       { id: "5D", label: "5D" },
+      { id: "1M", label: "1M", months: 1 },
+      { id: "3M", label: "3M", months: 3 },
+      { id: "6M", label: "6M", months: 6 },
+      { id: "1Y", label: "1Y", years: 1 },
+      { id: "3Y", label: "3Y", years: 3 },
+      { id: "5Y", label: "5Y", years: 5 },
+      { id: "10Y", label: "10Y", years: 10 },
+      { id: "20Y", label: "20Y", years: 20 },
       { id: "MAX", label: "MAX", max: true }
     ]
   },
@@ -193,7 +201,7 @@ export function getChartDataForRange(
     return data;
   }
 
- const latestDate = parseISO(latestPoint.date);
+   const latestDate = parseISO(latestPoint.date);
   const bucket = getChartFrequencyBucket(frequency);
 
   const cutoffDate =
@@ -206,7 +214,11 @@ export function getChartDataForRange(
             ? subDays(latestDate, 1)
             : rangeId === "5D"
               ? subDays(latestDate, 5)
-              : null
+              : option.years !== undefined
+                ? subYears(latestDate, option.years)
+                : option.months !== undefined
+                  ? subMonths(latestDate, option.months)
+                  : null
       : option.years !== undefined
         ? subYears(latestDate, option.years)
         : option.months !== undefined
@@ -229,17 +241,23 @@ export function formatChartAxisDate(
   rangeId: ChartRangeId
 ) {
   const bucket = getChartFrequencyBucket(frequency);
+
   if (bucket === "intraday") {
-    if (rangeId === "1H" || rangeId === "4H") {
+    if (rangeId === "1H" || rangeId === "4H" || rangeId === "1D") {
       return shortAxisFormat(value, "HH:mm");
     }
 
-    if (rangeId === "1D") {
-      return shortAxisFormat(value, "HH:mm");
+    if (rangeId === "5D" || rangeId === "1M" || rangeId === "3M") {
+      return longAxisFormat(value, "MMM d");
     }
 
-    return longAxisFormat(value, "MMM d");
+    if (rangeId === "6M" || rangeId === "1Y" || rangeId === "3Y" || rangeId === "5Y") {
+      return longAxisFormat(value, "MMM ''yy");
+    }
+
+    return longAxisFormat(value, "yyyy");
   }
+
   if (bucket === "daily") {
     if (rangeId === "1M" || rangeId === "3M") {
       return shortAxisFormat(value, "MMM d");
@@ -300,7 +318,7 @@ export function formatChartTooltipDate(value: string, frequency: Frequency) {
 export function getChartTickMinGap(frequency: Frequency, rangeId: ChartRangeId) {
   const bucket = getChartFrequencyBucket(frequency);
 
-    if (bucket === "intraday") {
+  if (bucket === "intraday") {
     return rangeId === "1H" ? 36 : 28;
   }
   
