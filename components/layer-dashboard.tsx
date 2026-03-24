@@ -141,16 +141,18 @@ export function LayerDashboard({
 
           <div className="grid auto-rows-fr gap-4 xl:grid-cols-2">
             {section.indicators.map((indicator) => (
-              <WidgetErrorBoundary
-                key={indicator.slug}
-                title={`${indicator.name} is temporarily unavailable`}
-                description="One broken card should not take down the rest of the route."
-              >
-                <IndicatorCard
-                  indicator={indicator}
-                />
-              </WidgetErrorBoundary>
-            ))}
+  <WidgetErrorBoundary
+    key={indicator.slug}
+    title={`${indicator.name} is temporarily unavailable`}
+    description="One broken card should not take down the rest of the route."
+  >
+    {indicator.slug === "gold" ? (
+      <LiveGoldQuote />
+    ) : (
+      <IndicatorCard indicator={indicator} />
+    )}
+  </WidgetErrorBoundary>
+))}
           </div>
         </section>
       ))}
