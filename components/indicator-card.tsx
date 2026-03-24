@@ -8,7 +8,7 @@ import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import { cn, formatIndicatorValue } from "@/lib/utils";
 import type { MacroIndicator } from "@/types/macro";
 import { LiveMarketHistoryChart } from "@/components/live-market-history-chart";
-
+ 
 function statusTone(status: MacroIndicator["status"]) {
   if (status === "live") {
     return "emerald" as const;
