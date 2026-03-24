@@ -13,7 +13,7 @@ export function formatIndicatorValue(value: number, unit: string) {
   if (unit === "usd") {
     return `$${value.toFixed(1)}`;
   }
-
+ 
   if (unit === "usd/oz") {
     return `$${Math.round(value)}`;
   }
