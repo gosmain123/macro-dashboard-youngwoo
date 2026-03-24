@@ -17,7 +17,7 @@ export type MarketLiveQuote = {
   sourceName: string;
   sourceUrl: string;
 };
-
+ 
 function getApiKey(): string {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
 
