@@ -3,7 +3,7 @@
 import { CalendarClock, ExternalLink, Info, MoveUpRight, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
+import { LiveMarketHistoryChart } from "@/components/live-market-history-chart";
 import { FollowUpLogicCard } from "@/components/follow-up-logic-card";
 import { IndicatorActionLinks } from "@/components/indicator-action-links";
 import { MetaChip } from "@/components/meta-chip";
@@ -13,6 +13,7 @@ import { getHistoricalContext, getIndicatorSourceType } from "@/lib/indicator-in
 import { getFollowUpLogic } from "@/lib/playbook-guide";
 import { cn, formatFreshnessAge, formatIndicatorValue, formatReleaseLabel, formatTimestamp, titleCase } from "@/lib/utils";
 import type { MacroIndicator } from "@/types/macro";
+
 
 const closeDelayMs = 180;
 
@@ -338,12 +339,16 @@ export function IndicatorTooltip({
                   </div>
 
                   <div className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
-                    <SparklineChart
-                      data={safeChartHistory}
-                      frequency={indicator.frequency}
-                      unit={indicator.unit}
-                      showOverlay={Boolean(indicator.overlays?.length)}
-                    />
+{indicator.slug === "gold" && indicator.status === "live" ? (
+  <LiveMarketHistoryChart symbol="gold" unit={indicator.unit} variant="detail" />
+) : (
+  <SparklineChart
+    data={safeChartHistory}
+    frequency={indicator.frequency}
+    unit={indicator.unit}
+    showOverlay={Boolean(indicator.overlays?.length)}
+  />
+)}
                   </div>
                 </section>
 
