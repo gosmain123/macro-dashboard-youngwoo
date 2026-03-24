@@ -9,7 +9,7 @@ import {
 } from "@/lib/hooks/use-market-history";
 
 type ChartPoint = {
-  date: string;
+  date: string; 
   value: number;
 };
 
