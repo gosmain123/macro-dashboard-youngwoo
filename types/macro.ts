@@ -17,7 +17,7 @@ export type MacroDimension =
 
 export type FeedAccess = "official-free" | "licensed-manual";
 
-export type Frequency = "Daily" | "Weekly" | "Monthly" | "Quarterly" | "Live";
+export type Frequency = "Intraday" | "Daily" | "Weekly" | "Monthly" | "Quarterly" | "Live";
 
 export type IndicatorTone = "positive" | "negative" | "neutral";
 
