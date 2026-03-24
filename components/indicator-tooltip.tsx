@@ -12,7 +12,7 @@ import { normalizeChartHistory } from "@/lib/chart-data";
 import { getHistoricalContext, getIndicatorSourceType } from "@/lib/indicator-insight";
 import { getFollowUpLogic } from "@/lib/playbook-guide";
 import { cn, formatFreshnessAge, formatIndicatorValue, formatReleaseLabel, formatTimestamp, titleCase } from "@/lib/utils";
-import type { MacroIndicator } from "@/types/macro";
+import type { MacroIndicator } from "@/types/macro"; 
 
 
 const closeDelayMs = 180;
