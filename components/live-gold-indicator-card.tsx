@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { IndicatorCard } from "@/components/indicator-card";
 import { useMarketQuote } from "@/lib/hooks/use-market-quote";
 import type { MacroIndicator } from "@/types/macro";
- 
+
 export function LiveGoldIndicatorCard({
   indicator
 }: {
