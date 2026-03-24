@@ -5,11 +5,7 @@ import { macroModules } from "@/lib/data/modules";
 import { getModulePayload } from "@/lib/dashboard";
 import type { MacroModuleSlug } from "@/types/macro";
 
-export const revalidate = 60;
-
-export function generateStaticParams() {
-  return macroModules.map((module) => ({ module: module.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params
