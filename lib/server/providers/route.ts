@@ -5,7 +5,19 @@ import { createSupabaseAdminClient } from "@/lib/server/supabase";
 
 const CACHE_SECONDS = 15;
 
-function isFreshEnough(updatedAt: string | null | undefined) {
+type MarketLatestRow = {
+  symbol: string;
+  price: number | null;
+  change_abs: number | null;
+  change_pct: number | null;
+  as_of: string;
+  source_name: string | null;
+  source_url: string | null;
+  payload: Record<string, unknown> | null;
+  updated_at: string | null;
+};
+
+function isFreshEnough(updatedAt: string | null | undefined): boolean {
   if (!updatedAt) {
     return false;
   }
@@ -19,26 +31,46 @@ function isFreshEnough(updatedAt: string | null | undefined) {
   return Date.now() - updatedMs <= CACHE_SECONDS * 1000;
 }
 
+function isSupportedSymbol(value: string | null): value is MarketLiveSymbol {
+  return value === "gold";
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value.replace(/,/g, "").trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const symbolParam = request.nextUrl.searchParams.get("symbol");
 
-    if (symbolParam !== "gold") {
+    if (!isSupportedSymbol(symbolParam)) {
       return NextResponse.json({ error: "Unsupported symbol" }, { status: 400 });
     }
 
-    const symbol = symbolParam as MarketLiveSymbol;
+    const symbol = symbolParam;
     const supabase = createSupabaseAdminClient();
 
-    const { data: existingRow, error: readError } = await supabase
+    const readResult = await supabase
       .from("market_latest")
-      .select("*")
+      .select("symbol,price,change_abs,change_pct,as_of,source_name,source_url,payload,updated_at")
       .eq("symbol", symbol)
-      .maybeSingle();
+      .limit(1)
+      .returns<MarketLatestRow[]>();
 
-    if (readError) {
-      throw new Error(`Failed to read market_latest: ${readError.message}`);
+    if (readResult.error) {
+      throw new Error(`Failed to read market_latest: ${readResult.error.message}`);
     }
+
+    const existingRow = readResult.data?.[0] ?? null;
 
     if (existingRow && isFreshEnough(existingRow.updated_at)) {
       return NextResponse.json({
@@ -56,20 +88,15 @@ export async function GET(request: NextRequest) {
 
     const liveQuote = await fetchMarketLiveQuote(symbol);
 
-    const previousPrice =
-      existingRow && typeof existingRow.price === "number"
-        ? existingRow.price
-        : typeof existingRow.price === "string"
-          ? Number(existingRow.price)
-          : null;
+    const previousPrice = existingRow ? toFiniteNumber(existingRow.price) : null;
 
     const changeAbs =
-      previousPrice !== null && Number.isFinite(previousPrice)
+      previousPrice !== null
         ? Number((liveQuote.price - previousPrice).toFixed(4))
         : null;
 
     const changePct =
-      previousPrice !== null && Number.isFinite(previousPrice) && previousPrice !== 0
+      previousPrice !== null && previousPrice !== 0
         ? Number((((liveQuote.price / previousPrice) - 1) * 100).toFixed(4))
         : null;
 
@@ -87,12 +114,12 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    const { error: upsertError } = await supabase
+    const upsertResult = await supabase
       .from("market_latest")
       .upsert(upsertRow, { onConflict: "symbol" });
 
-    if (upsertError) {
-      throw new Error(`Failed to upsert market_latest: ${upsertError.message}`);
+    if (upsertResult.error) {
+      throw new Error(`Failed to upsert market_latest: ${upsertResult.error.message}`);
     }
 
     return NextResponse.json({
