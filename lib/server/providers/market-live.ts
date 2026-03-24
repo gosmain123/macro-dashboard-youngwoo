@@ -17,7 +17,7 @@ export type MarketHistoryRange =
   | "10Y"
   | "20Y"
   | "MAX";
-
+ 
 type TwelveDataPriceResponse = {
   price?: string;
   code?: number;
