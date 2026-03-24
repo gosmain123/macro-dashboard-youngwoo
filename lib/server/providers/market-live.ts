@@ -1,57 +1,244 @@
-export function formatChartAxisDate(
-  value: string,
-  frequency: Frequency,
-  rangeId: ChartRangeId
-) {
-  const bucket = getChartFrequencyBucket(frequency);
+const TWELVE_DATA_BASE_URL = "https://api.twelvedata.com";
+const MARKET_HISTORY_TIMEZONE = "UTC";
 
-  if (bucket === "intraday") {
-    if (rangeId === "1H" || rangeId === "4H" || rangeId === "1D") {
-      return shortAxisFormat(value, "HH:mm");
-    }
+export type MarketLiveSymbol = "gold";
 
-    if (rangeId === "5D" || rangeId === "1M" || rangeId === "3M") {
-      return longAxisFormat(value, "MMM d");
-    }
+export type MarketHistoryRange =
+  | "1H"
+  | "4H"
+  | "1D"
+  | "5D"
+  | "1M"
+  | "3M"
+  | "6M"
+  | "1Y"
+  | "3Y"
+  | "5Y"
+  | "10Y"
+  | "20Y"
+  | "MAX";
 
-    if (rangeId === "6M" || rangeId === "1Y" || rangeId === "3Y" || rangeId === "5Y") {
-      return longAxisFormat(value, "MMM ''yy");
-    }
+type TwelveDataPriceResponse = {
+  price?: string;
+  code?: number;
+  message?: string;
+  status?: string;
+};
 
-    return longAxisFormat(value, "yyyy");
+type TwelveDataTimeSeriesValue = {
+  datetime?: string;
+  open?: string;
+  high?: string;
+  low?: string;
+  close?: string;
+  volume?: string;
+};
+
+type TwelveDataTimeSeriesResponse = {
+  values?: TwelveDataTimeSeriesValue[];
+  status?: string;
+  message?: string;
+};
+
+export type MarketLiveQuote = {
+  symbol: MarketLiveSymbol;
+  vendorSymbol: string;
+  price: number;
+  asOf: string;
+  sourceName: string;
+  sourceUrl: string;
+};
+
+export type MarketHistoryPoint = {
+  date: string;
+  value: number;
+};
+
+type MarketHistoryConfig = {
+  interval: string;
+  outputsize: number;
+};
+
+const HISTORY_CONFIG: Record<MarketHistoryRange, MarketHistoryConfig> = {
+  "1H": { interval: "1min", outputsize: 60 },
+  "4H": { interval: "5min", outputsize: 48 },
+  "1D": { interval: "15min", outputsize: 96 },
+  "5D": { interval: "1h", outputsize: 120 },
+  "1M": { interval: "4h", outputsize: 180 },
+  "3M": { interval: "1day", outputsize: 90 },
+  "6M": { interval: "1day", outputsize: 180 },
+  "1Y": { interval: "1day", outputsize: 365 },
+  "3Y": { interval: "1week", outputsize: 156 },
+  "5Y": { interval: "1week", outputsize: 260 },
+  "10Y": { interval: "1month", outputsize: 120 },
+  "20Y": { interval: "1month", outputsize: 240 },
+  "MAX": { interval: "1month", outputsize: 5000 }
+};
+
+function getApiKey(): string {
+  const apiKey = process.env.TWELVE_DATA_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Missing TWELVE_DATA_API_KEY.");
   }
 
-  if (bucket === "daily") {
-    if (rangeId === "1M" || rangeId === "3M") {
-      return shortAxisFormat(value, "MMM d");
-    }
+  return apiKey;
+}
 
-    if (rangeId === "6M" || rangeId === "1Y") {
-      return longAxisFormat(value, "MMM yy");
-    }
+function getVendorSymbol(symbol: MarketLiveSymbol): string {
+  switch (symbol) {
+    case "gold":
+      return "XAU/USD";
+    default:
+      throw new Error("Unsupported market live symbol.");
+  }
+}
 
-    return longAxisFormat(value, "MMM ''yy");
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
   }
 
-  if (bucket === "weekly") {
-    if (rangeId === "3M" || rangeId === "6M") {
-      return shortAxisFormat(value, "MMM d");
+  if (typeof value === "string") {
+    const parsed = Number(value.replace(/,/g, "").trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function normalizeSeriesTime(value: string): string {
+  const trimmed = value.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return `${trimmed}T00:00:00.000Z`;
+  }
+
+  const normalized = trimmed.includes("T") ? trimmed : trimmed.replace(" ", "T");
+  const withZone = normalized.endsWith("Z") ? normalized : `${normalized}Z`;
+  const parsed = new Date(withZone);
+
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Invalid time series timestamp: ${value}`);
+  }
+
+  return parsed.toISOString();
+}
+
+function dedupePoints(points: MarketHistoryPoint[]) {
+  const map = new Map<string, MarketHistoryPoint>();
+
+  for (const point of points) {
+    map.set(point.date, point);
+  }
+
+  return [...map.values()].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}
+
+export async function fetchMarketLiveQuote(symbol: MarketLiveSymbol): Promise<MarketLiveQuote> {
+  const apiKey = getApiKey();
+  const vendorSymbol = getVendorSymbol(symbol);
+
+  const url = new URL(`${TWELVE_DATA_BASE_URL}/price`);
+  url.searchParams.set("symbol", vendorSymbol);
+  url.searchParams.set("apikey", apiKey);
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      "user-agent": "macro-dashboard/1.0",
+      accept: "application/json,text/plain;q=0.8,*/*;q=0.7"
+    },
+    next: { revalidate: 0 }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Twelve Data price request failed for ${symbol}: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as TwelveDataPriceResponse;
+
+  if (payload.status === "error") {
+    throw new Error(payload.message ?? `Twelve Data returned an error for ${symbol}.`);
+  }
+
+  const price = toFiniteNumber(payload.price);
+
+  if (price === null) {
+    throw new Error(`Invalid Twelve Data price payload for ${symbol}.`);
+  }
+
+  return {
+    symbol,
+    vendorSymbol,
+    price,
+    asOf: new Date().toISOString(),
+    sourceName: "Twelve Data",
+    sourceUrl: `https://api.twelvedata.com/price?symbol=${encodeURIComponent(vendorSymbol)}`
+  };
+}
+
+export async function fetchMarketLiveHistory(
+  symbol: MarketLiveSymbol,
+  range: MarketHistoryRange
+): Promise<MarketHistoryPoint[]> {
+  const apiKey = getApiKey();
+  const vendorSymbol = getVendorSymbol(symbol);
+  const config = HISTORY_CONFIG[range];
+
+  const url = new URL(`${TWELVE_DATA_BASE_URL}/time_series`);
+  url.searchParams.set("symbol", vendorSymbol);
+  url.searchParams.set("interval", config.interval);
+  url.searchParams.set("outputsize", String(config.outputsize));
+  url.searchParams.set("timezone", MARKET_HISTORY_TIMEZONE);
+  url.searchParams.set("apikey", apiKey);
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      "user-agent": "macro-dashboard/1.0",
+      accept: "application/json,text/plain;q=0.8,*/*;q=0.7"
+    },
+    next: { revalidate: 0 }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Twelve Data history request failed for ${symbol}/${range}: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as TwelveDataTimeSeriesResponse;
+
+  if (payload.status === "error") {
+    throw new Error(payload.message ?? `Twelve Data returned a history error for ${symbol}/${range}.`);
+  }
+
+  const values = Array.isArray(payload.values) ? payload.values : [];
+
+  const points = values
+    .map((item) => {
+      const close = toFiniteNumber(item.close);
+
+      if (!item.datetime || close === null) {
+        return null;
+      }
+
+      return {
+        date: normalizeSeriesTime(item.datetime),
+        value: close
+      };
+    })
+    .filter((item): item is MarketHistoryPoint => item !== null)
+    .reverse();
+
+  if (points.length < 2) {
+    throw new Error(`Not enough market history returned for ${symbol}/${range}.`);
+  }
+
+  const quote = await fetchMarketLiveQuote(symbol);
+
+  return dedupePoints([
+    ...points,
+    {
+      date: quote.asOf,
+      value: quote.price
     }
-
-    if (rangeId === "1Y") {
-      return longAxisFormat(value, "MMM yy");
-    }
-
-    return longAxisFormat(value, "MMM ''yy");
-  }
-
-  if (bucket === "quarterly") {
-    return rangeId === "20Y" ? longAxisFormat(value, "yyyy") : longAxisFormat(value, "QQQ yy");
-  }
-
-  if (rangeId === "10Y" || rangeId === "20Y") {
-    return longAxisFormat(value, "yyyy");
-  }
-
-  return longAxisFormat(value, "MMM yy");
+  ]);
 }
