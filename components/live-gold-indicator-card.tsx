@@ -5,7 +5,29 @@ import { useMemo } from "react";
 import { IndicatorCard } from "@/components/indicator-card";
 import { useMarketBars } from "@/lib/hooks/use-market-bars";
 import { useMarketQuote } from "@/lib/hooks/use-market-quote";
-import type { MacroIndicator } from "@/types/macro";
+import type { ChartPoint, MacroIndicator } from "@/types/macro";
+
+function mergeGoldChartHistory(
+  longHistory: ChartPoint[],
+  intradayHistory: ChartPoint[],
+  quotePoint?: ChartPoint
+) {
+  const merged = new Map<string, ChartPoint>();
+
+  for (const point of longHistory) {
+    merged.set(point.date, point);
+  }
+
+  for (const point of intradayHistory) {
+    merged.set(point.date, point);
+  }
+
+  if (quotePoint) {
+    merged.set(quotePoint.date, quotePoint);
+  }
+
+  return [...merged.values()].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}
 
 export function LiveGoldIndicatorCard({
   indicator
@@ -13,7 +35,7 @@ export function LiveGoldIndicatorCard({
   indicator: MacroIndicator;
 }) {
   const { data: quoteData } = useMarketQuote("gold", 15000);
-  const { data: barsData } = useMarketBars("gold", 180, 60000);
+  const { data: barsData } = useMarketBars("gold", 390, 60000);
 
   const patchedIndicator = useMemo<MacroIndicator>(() => {
     const currentValue = quoteData?.price ?? indicator.currentValue;
@@ -23,10 +45,18 @@ export function LiveGoldIndicatorCard({
         ? Number((currentValue - quoteData.change_abs).toFixed(4))
         : indicator.priorValue;
 
-    const chartHistory =
-      barsData?.points && barsData.points.length >= 2
-        ? barsData.points
-        : indicator.chartHistory;
+    const longHistory = Array.isArray(indicator.chartHistory) ? indicator.chartHistory : [];
+    const intradayHistory = barsData?.points ?? [];
+
+    const quotePoint =
+      quoteData?.as_of
+        ? {
+            date: quoteData.as_of,
+            value: currentValue
+          }
+        : undefined;
+
+    const chartHistory = mergeGoldChartHistory(longHistory, intradayHistory, quotePoint);
 
     const updatedAt = quoteData?.as_of ?? indicator.updatedAt;
 
