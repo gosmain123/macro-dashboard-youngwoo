@@ -9,7 +9,16 @@ type TwelveDataPriceResponse = {
   status?: string;
 };
 
-function getApiKey() {
+export type MarketLiveQuote = {
+  symbol: MarketLiveSymbol;
+  vendorSymbol: string;
+  price: number;
+  asOf: string;
+  sourceName: string;
+  sourceUrl: string;
+};
+
+function getApiKey(): string {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
 
   if (!apiKey) {
@@ -19,15 +28,16 @@ function getApiKey() {
   return apiKey;
 }
 
-function getVendorSymbol(symbol: MarketLiveSymbol) {
-  if (symbol === "gold") {
-    return "XAU/USD";
+function getVendorSymbol(symbol: MarketLiveSymbol): string {
+  switch (symbol) {
+    case "gold":
+      return "XAU/USD";
+    default:
+      throw new Error("Unsupported market live symbol.");
   }
-
-  throw new Error(`Unsupported market live symbol: ${symbol}`);
 }
 
-function toFiniteNumber(value: unknown) {
+function toFiniteNumber(value: unknown): number | null {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : null;
   }
@@ -40,7 +50,7 @@ function toFiniteNumber(value: unknown) {
   return null;
 }
 
-export async function fetchMarketLiveQuote(symbol: MarketLiveSymbol) {
+export async function fetchMarketLiveQuote(symbol: MarketLiveSymbol): Promise<MarketLiveQuote> {
   const apiKey = getApiKey();
   const vendorSymbol = getVendorSymbol(symbol);
 
