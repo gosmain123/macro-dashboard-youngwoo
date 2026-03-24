@@ -3,31 +3,8 @@
 import { useMemo } from "react";
 
 import { IndicatorCard } from "@/components/indicator-card";
-import { useMarketBars } from "@/lib/hooks/use-market-bars";
 import { useMarketQuote } from "@/lib/hooks/use-market-quote";
-import type { ChartPoint, MacroIndicator } from "@/types/macro";
-
-function mergeGoldChartHistory(
-  longHistory: ChartPoint[],
-  intradayHistory: ChartPoint[],
-  quotePoint?: ChartPoint
-) {
-  const merged = new Map<string, ChartPoint>();
-
-  for (const point of longHistory) {
-    merged.set(point.date, point);
-  }
-
-  for (const point of intradayHistory) {
-    merged.set(point.date, point);
-  }
-
-  if (quotePoint) {
-    merged.set(quotePoint.date, quotePoint);
-  }
-
-  return [...merged.values()].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-}
+import type { MacroIndicator } from "@/types/macro";
 
 export function LiveGoldIndicatorCard({
   indicator
@@ -35,7 +12,6 @@ export function LiveGoldIndicatorCard({
   indicator: MacroIndicator;
 }) {
   const { data: quoteData } = useMarketQuote("gold", 15000);
-  const { data: barsData } = useMarketBars("gold", 390, 60000);
 
   const patchedIndicator = useMemo<MacroIndicator>(() => {
     const currentValue = quoteData?.price ?? indicator.currentValue;
@@ -45,28 +21,13 @@ export function LiveGoldIndicatorCard({
         ? Number((currentValue - quoteData.change_abs).toFixed(4))
         : indicator.priorValue;
 
-    const longHistory = Array.isArray(indicator.chartHistory) ? indicator.chartHistory : [];
-    const intradayHistory = barsData?.points ?? [];
-
-    const quotePoint =
-      quoteData?.as_of
-        ? {
-            date: quoteData.as_of,
-            value: currentValue
-          }
-        : undefined;
-
-    const chartHistory = mergeGoldChartHistory(longHistory, intradayHistory, quotePoint);
-
     const updatedAt = quoteData?.as_of ?? indicator.updatedAt;
 
     return {
       ...indicator,
-      frequency: "Intraday",
       currentValue,
       priorValue,
       change: Number((currentValue - priorValue).toFixed(4)),
-      chartHistory,
       status: quoteData ? "live" : indicator.status,
       dataStatus: quoteData ? "live" : indicator.dataStatus,
       updatedAt,
@@ -88,7 +49,7 @@ export function LiveGoldIndicatorCard({
       fallbackUsageReason: quoteData ? undefined : indicator.fallbackUsageReason,
       errorMessage: quoteData ? undefined : indicator.errorMessage
     };
-  }, [indicator, quoteData, barsData]);
+  }, [indicator, quoteData]);
 
   return <IndicatorCard indicator={patchedIndicator} />;
 }
