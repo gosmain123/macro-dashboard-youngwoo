@@ -28,16 +28,21 @@ function normalizeChartDate(value: unknown) {
     return trimmed;
   }
 
-  const parsed = new Date(trimmed);
+  const normalized = trimmed.includes("T") ? trimmed : trimmed.replace(" ", "T");
+  const parsed = new Date(normalized);
 
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
 
-  return parsed.toISOString().slice(0, 10);
+  return parsed.toISOString();
 }
 
 function getTimestamp(date: string) {
+  if (date.includes("T")) {
+    return new Date(date).getTime();
+  }
+
   return new Date(`${date}T00:00:00Z`).getTime();
 }
 
