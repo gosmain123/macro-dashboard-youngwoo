@@ -24,7 +24,7 @@ type TwelveDataPriceResponse = {
   message?: string;
   status?: string;
 };
-
+ 
 type TwelveDataTimeSeriesValue = {
   datetime?: string;
   open?: string;
