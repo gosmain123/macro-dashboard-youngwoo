@@ -1,8 +1,12 @@
-import { format, parseISO, subMonths, subYears } from "date-fns";
+import { format, parseISO, subDays, subHours, subMonths, subYears } from "date-fns";
 
 import type { ChartPoint, Frequency } from "@/types/macro";
 
 export type ChartRangeId =
+  | "1H"
+  | "4H"
+  | "1D"
+  | "5D"
   | "1M"
   | "3M"
   | "6M"
@@ -13,7 +17,7 @@ export type ChartRangeId =
   | "20Y"
   | "MAX";
 
-type ChartFrequencyBucket = "daily" | "weekly" | "monthly" | "quarterly";
+type ChartFrequencyBucket = "intraday" | "daily" | "weekly" | "monthly" | "quarterly";
 
 type ChartRangeOption = {
   id: ChartRangeId;
@@ -31,6 +35,17 @@ const chartRangeConfig: Record<
     options: ChartRangeOption[];
   }
 > = {
+   intraday: {
+    defaultRange: "4H",
+    historyPointTarget: 390,
+    options: [
+      { id: "1H", label: "1H" },
+      { id: "4H", label: "4H" },
+      { id: "1D", label: "1D" },
+      { id: "5D", label: "5D" },
+      { id: "MAX", label: "MAX", max: true }
+    ]
+  },
   daily: {
     defaultRange: "3M",
     historyPointTarget: 365 * 20,
@@ -87,6 +102,10 @@ const chartRangeConfig: Record<
 };
 
 function getChartFrequencyBucket(frequency: Frequency): ChartFrequencyBucket {
+  if (frequency === "Intraday") {
+    return "intraday";
+  }
+
   if (frequency === "Daily" || frequency === "Live") {
     return "daily";
   }
@@ -174,14 +193,26 @@ export function getChartDataForRange(
     return data;
   }
 
-  const latestDate = parseISO(latestPoint.date);
-  const cutoffDate =
-    option.years !== undefined
-      ? subYears(latestDate, option.years)
-      : option.months !== undefined
-        ? subMonths(latestDate, option.months)
-        : null;
+ const latestDate = parseISO(latestPoint.date);
+  const bucket = getChartFrequencyBucket(frequency);
 
+  const cutoffDate =
+    bucket === "intraday"
+      ? rangeId === "1H"
+        ? subHours(latestDate, 1)
+        : rangeId === "4H"
+          ? subHours(latestDate, 4)
+          : rangeId === "1D"
+            ? subDays(latestDate, 1)
+            : rangeId === "5D"
+              ? subDays(latestDate, 5)
+              : null
+      : option.years !== undefined
+        ? subYears(latestDate, option.years)
+        : option.months !== undefined
+          ? subMonths(latestDate, option.months)
+          : null;
+  
   if (!cutoffDate) {
     return data;
   }
@@ -198,7 +229,17 @@ export function formatChartAxisDate(
   rangeId: ChartRangeId
 ) {
   const bucket = getChartFrequencyBucket(frequency);
+  if (bucket === "intraday") {
+    if (rangeId === "1H" || rangeId === "4H") {
+      return shortAxisFormat(value, "HH:mm");
+    }
 
+    if (rangeId === "1D") {
+      return shortAxisFormat(value, "HH:mm");
+    }
+
+    return longAxisFormat(value, "MMM d");
+  }
   if (bucket === "daily") {
     if (rangeId === "1M" || rangeId === "3M") {
       return shortAxisFormat(value, "MMM d");
@@ -236,7 +277,11 @@ export function formatChartAxisDate(
 
 export function formatChartTooltipDate(value: string, frequency: Frequency) {
   const bucket = getChartFrequencyBucket(frequency);
-
+  
+  if (bucket === "intraday") {
+    return format(parseISO(value), "MMM d, HH:mm");
+  }
+  
   if (bucket === "daily") {
     return format(parseISO(value), "MMM d, yyyy");
   }
@@ -255,6 +300,10 @@ export function formatChartTooltipDate(value: string, frequency: Frequency) {
 export function getChartTickMinGap(frequency: Frequency, rangeId: ChartRangeId) {
   const bucket = getChartFrequencyBucket(frequency);
 
+    if (bucket === "intraday") {
+    return rangeId === "1H" ? 36 : 28;
+  }
+  
   if (bucket === "daily") {
     return rangeId === "1M" ? 24 : 30;
   }
@@ -267,7 +316,8 @@ export function getChartTickMinGap(frequency: Frequency, rangeId: ChartRangeId) 
 }
 
 export function getChartLineType(frequency: Frequency) {
-  return getChartFrequencyBucket(frequency) === "daily" ? "monotone" : "linear";
+  const bucket = getChartFrequencyBucket(frequency);
+  return bucket === "daily" ? "monotone" : "linear";
 }
 
 export function shouldShowChartDots(frequency: Frequency, pointCount: number) {
