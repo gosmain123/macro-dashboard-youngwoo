@@ -7,7 +7,7 @@ import { MiniLogicMap } from "@/components/mini-logic-map";
 import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import { getMiniLogicMapForLayer } from "@/lib/macro-flow";
 import type { LayerPagePayload } from "@/lib/layer-pages";
-import { LiveGoldQuote } from "@/components/live-gold-quote";
+import { LiveGoldIndicatorCard } from "@/components/live-gold-indicator-card";
 
 export function LayerDashboard({
   page,
