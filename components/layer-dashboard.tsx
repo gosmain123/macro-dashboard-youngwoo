@@ -147,11 +147,11 @@ export function LayerDashboard({
     title={`${indicator.name} is temporarily unavailable`}
     description="One broken card should not take down the rest of the route."
   >
-    {indicator.slug === "gold" ? (
-      <LiveGoldQuote />
-    ) : (
-      <IndicatorCard indicator={indicator} />
-    )}
+  {indicator.slug === "gold" ? (
+  <LiveGoldIndicatorCard indicator={indicator} />
+) : (
+  <IndicatorCard indicator={indicator} />
+)}
   </WidgetErrorBoundary>
 ))}
           </div>
