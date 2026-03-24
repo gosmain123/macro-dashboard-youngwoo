@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
+ 
 export type MarketHistoryRange =
   | "1H"
   | "4H"
