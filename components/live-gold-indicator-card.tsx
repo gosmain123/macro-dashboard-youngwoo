@@ -32,6 +32,7 @@ export function LiveGoldIndicatorCard({
 
     return {
       ...indicator,
+      frequency: "Intraday",
       currentValue,
       priorValue,
       change: Number((currentValue - priorValue).toFixed(4)),
@@ -42,6 +43,13 @@ export function LiveGoldIndicatorCard({
       lastUpdated: updatedAt,
       nextReleaseAt: undefined,
       freshnessAgeMinutes: 0,
+      release: {
+        type: "continuous",
+        label: "Market live",
+        detail: "Updates continuously from the live market feed.",
+        sourceName: quoteData?.source_name ?? "Twelve Data",
+        sourceUrl: quoteData?.source_url ?? indicator.source.url
+      },
       source: {
         ...indicator.source,
         name: quoteData?.source_name ?? "Twelve Data",
