@@ -197,8 +197,8 @@ export function LiveMarketHistoryChart({
   const gradientId = useId().replace(/:/g, "");
   const { data, loading, error } = useMarketHistory(symbol, selectedRange, compact ? 60000 : 30000);
 
-  const visibleData = data?.points ?? [];
-  const canRenderChart = visibleData.length >= 2;
+const visibleData = useMemo(() => data?.points ?? [], [data?.points]);
+const canRenderChart = visibleData.length >= 2;
 
   const projected = useMemo(
     () => (canRenderChart ? projectPoints(visibleData, dimensions.width, dimensions.height, dimensions.padding) : []),
