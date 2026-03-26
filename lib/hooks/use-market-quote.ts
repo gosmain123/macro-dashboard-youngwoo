@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type MarketQuoteResponse = {
   symbol: string;
@@ -20,7 +20,7 @@ export function useMarketQuote(symbol: "gold", refreshMs = 15000) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetchQuote() {
+  const fetchQuote = useCallback(async () => {
     try {
       const response = await fetch(`/api/market/quote?symbol=${symbol}`, {
         cache: "no-store"
@@ -39,7 +39,7 @@ export function useMarketQuote(symbol: "gold", refreshMs = 15000) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [symbol]);
 
   useEffect(() => {
     void fetchQuote();
@@ -49,7 +49,7 @@ export function useMarketQuote(symbol: "gold", refreshMs = 15000) {
     }, refreshMs);
 
     return () => window.clearInterval(id);
-  }, [symbol, refreshMs]);
+  }, [fetchQuote, refreshMs]);
 
   return { data, loading, error };
 }
