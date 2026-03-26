@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { IndicatorCard } from "@/components/indicator-card";
 import { useMarketQuote } from "@/lib/hooks/use-market-quote";
 import type { MacroIndicator } from "@/types/macro";
-  
+
 export function LiveGoldIndicatorCard({
   indicator
 }: {
@@ -14,26 +14,19 @@ export function LiveGoldIndicatorCard({
   const { data: quoteData } = useMarketQuote("gold", 15000);
 
   const patchedIndicator = useMemo<MacroIndicator>(() => {
-    const currentValue = quoteData?.price ?? indicator.currentValue;
-
-    const priorValue =
-      quoteData?.change_abs !== null && quoteData?.change_abs !== undefined
-        ? Number((currentValue - quoteData.change_abs).toFixed(4))
-        : indicator.priorValue;
-
     const updatedAt = quoteData?.as_of ?? indicator.updatedAt;
 
     return {
       ...indicator,
-      currentValue,
-      priorValue,
-      change: Number((currentValue - priorValue).toFixed(4)),
+      currentValue: quoteData?.price ?? indicator.currentValue,
       status: quoteData ? "live" : indicator.status,
       dataStatus: quoteData ? "live" : indicator.dataStatus,
+      freshnessStatus: quoteData ? "fresh" : indicator.freshnessStatus,
       updatedAt,
       lastUpdated: updatedAt,
+      lastSuccessfulFetch: quoteData ? updatedAt : indicator.lastSuccessfulFetch,
       nextReleaseAt: undefined,
-      freshnessAgeMinutes: 0,
+      freshnessAgeMinutes: quoteData ? 0 : indicator.freshnessAgeMinutes,
       release: {
         type: "continuous",
         label: "Market live",
