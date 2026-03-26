@@ -232,13 +232,5 @@ export async function fetchMarketLiveHistory(
     throw new Error(`Not enough market history returned for ${symbol}/${range}.`);
   }
 
-  const quote = await fetchMarketLiveQuote(symbol);
-
-  return dedupePoints([
-    ...points,
-    {
-      date: quote.asOf,
-      value: quote.price
-    }
-  ]);
+  return dedupePoints(points);
 }
