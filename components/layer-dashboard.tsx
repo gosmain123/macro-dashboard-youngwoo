@@ -7,7 +7,6 @@ import { MiniLogicMap } from "@/components/mini-logic-map";
 import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import { getMiniLogicMapForLayer } from "@/lib/macro-flow";
 import type { LayerPagePayload } from "@/lib/layer-pages";
-import { LiveGoldIndicatorCard } from "@/components/live-gold-indicator-card";
 
 export function LayerDashboard({
   page,
@@ -147,8 +146,8 @@ export function LayerDashboard({
     title={`${indicator.name} is temporarily unavailable`}
     description="One broken card should not take down the rest of the route."
   >
-  {indicator.slug === "gold" ? (
-  <LiveGoldIndicatorCard indicator={indicator} />
+{supportsLiveMarketQuote(indicator.slug) ? (
+  <LiveMarketIndicatorCard indicator={indicator} />
 ) : (
   <IndicatorCard indicator={indicator} />
 )}
