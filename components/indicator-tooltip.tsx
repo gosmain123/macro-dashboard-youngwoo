@@ -343,7 +343,8 @@ export function IndicatorTooltip({
                   </div>
 
                   <div className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
-{supportsLiveMarketHistory(indicator.slug) && indicator.status === "live" ? (
+{supportsLiveMarketHistory(indicator.slug) &&
+(indicator.status === "live" || indicator.status === "stale-live") ? (
   <LiveMarketHistoryChart
     slug={indicator.slug}
     symbol={getLiveMarketSymbolBySlug(indicator.slug)!}
