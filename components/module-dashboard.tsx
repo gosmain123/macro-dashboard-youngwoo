@@ -1,10 +1,11 @@
 "use client";
 
 import { IndicatorCard } from "@/components/indicator-card";
-import { LiveGoldIndicatorCard } from "@/components/live-gold-indicator-card";
+import { LiveMarketIndicatorCard } from "@/components/live-market-indicator-card";
 import { MiniLogicMap } from "@/components/mini-logic-map";
 import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import { getMiniLogicMapForModule } from "@/lib/macro-flow";
+import { supportsLiveMarketQuote } from "@/lib/market-live-config";
 import type { MacroIndicator, MacroModule } from "@/types/macro";
 
 export function ModuleDashboard({
@@ -41,8 +42,8 @@ export function ModuleDashboard({
             title={`${indicator.name} is temporarily unavailable`}
             description="One broken card should not take down the rest of the module."
           >
-            {indicator.slug === "gold" ? (
-              <LiveGoldIndicatorCard indicator={indicator} />
+            {supportsLiveMarketQuote(indicator.slug) ? (
+              <LiveMarketIndicatorCard indicator={indicator} />
             ) : (
               <IndicatorCard indicator={indicator} />
             )}
