@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { LiveMarketSymbol } from "@/lib/market-live-config";
 
 type MarketQuoteResponse = {
   symbol: string;
@@ -14,8 +15,8 @@ type MarketQuoteResponse = {
   cached: boolean;
   error?: string;
 };
- 
-export function useMarketQuote(symbol: "gold", refreshMs = 15000) {
+
+export function useMarketQuote(symbol: LiveMarketSymbol, refreshMs = 15000) {
   const [data, setData] = useState<MarketQuoteResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
