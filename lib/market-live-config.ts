@@ -5,7 +5,7 @@ export type IndicatorUpdateTier =
   | "daily-batch"
   | "release-driven";
 
-export type LiveMarketSymbol = "gold";
+export type LiveMarketSymbol = "gold" | "vix";
 
 const INTRADAY_MARKET_SLUGS = new Set([
   "gold",
@@ -74,10 +74,9 @@ const RELEASE_DRIVEN_SLUGS = new Set([
   "thirteen-f-tracker"
 ]);
 
-// 실제로 provider route까지 구현된 live market만 여기에 넣음.
-// 지금은 gold만 구현.
 const LIVE_MARKET_SYMBOL_BY_SLUG = {
   gold: "gold"
+  vix: "vis"
 } as const satisfies Partial<Record<string, LiveMarketSymbol>>;
 
 export function getIndicatorUpdateTier(slug: string): IndicatorUpdateTier {
