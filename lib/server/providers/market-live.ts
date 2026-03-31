@@ -40,7 +40,7 @@ type TwelveDataTimeSeriesResponse = {
 };
 
 export type MarketLiveQuote = {
-  symbol: MarketLiveSymbol;
+  symbol: LiveMarketSymbol;
   vendorSymbol: string;
   price: number;
   asOf: string;
