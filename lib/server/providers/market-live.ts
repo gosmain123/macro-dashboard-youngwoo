@@ -1,7 +1,7 @@
 const TWELVE_DATA_BASE_URL = "https://api.twelvedata.com";
 const MARKET_HISTORY_TIMEZONE = "UTC";
 import type { LiveMarketSymbol } from "@/lib/market-live-config";
-
+ 
 export type MarketHistoryRange =
   | "1H"
   | "4H"
