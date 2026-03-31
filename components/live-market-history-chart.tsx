@@ -2,6 +2,12 @@
 
 import { useId, useMemo, useState } from "react";
 
+import {
+  type LiveMarketSymbol,
+  getDefaultHistoryRangeForSlug,
+  getLiveHistoryRefreshMs
+} from "@/lib/market-live-config";
+
 import { cn, formatIndicatorValue } from "@/lib/utils";
 import {
   type MarketHistoryRange,
@@ -185,30 +191,36 @@ function ChartUnavailable({ compact }: { compact: boolean }) {
 }
 
 export function LiveMarketHistoryChart({
+  slug,
   symbol,
   unit,
   variant = "detail"
 }: {
-  symbol: "gold";
+  slug: string;
+  symbol: LiveMarketSymbol;
   unit: string;
   variant?: "compact" | "detail";
 }) {
   const compact = variant === "compact";
   const dimensions = compact ? compactDimensions : detailDimensions;
-  const [selectedRange, setSelectedRange] = useState<MarketHistoryRange>("1D");
+  const [selectedRange, setSelectedRange] = useState<MarketHistoryRange>(
+  getDefaultHistoryRangeForSlug(slug)
+);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const gradientId = useId().replace(/:/g, "");
 
-  const { data, loading, error } = useMarketHistory(
-    symbol,
-    selectedRange,
-    compact ? 60000 : 30000
-  );
+const { data, loading, error } = useMarketHistory(
+  symbol,
+  selectedRange,
+  getLiveHistoryRefreshMs(slug, variant)
+);
 
+  
   const visibleData = useMemo(() => data?.points ?? [], [data?.points]);
   const renderRange = data?.range ?? selectedRange;
   const canRenderChart = visibleData.length >= 2;
 
+  
   const projected = useMemo(
     () =>
       canRenderChart
