@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { fetchMarketLiveQuote, type MarketLiveSymbol } from "@/lib/server/providers/market-live";
 import { createSupabaseAdminClient } from "@/lib/server/supabase";
-
+import {
+  isSupportedLiveMarketSymbol,
+  type LiveMarketSymbol
+} from "@/lib/market-live-config";
 const CACHE_SECONDS = 15;
 
 type MarketLatestRow = {
@@ -52,11 +55,11 @@ export async function GET(request: NextRequest) {
   try {
     const symbolParam = request.nextUrl.searchParams.get("symbol");
 
-    if (!isSupportedSymbol(symbolParam)) {
-      return NextResponse.json({ error: "Unsupported symbol" }, { status: 400 });
-    }
+if (!isSupportedLiveMarketSymbol(symbolParam)) {
+  return NextResponse.json({ error: "Unsupported symbol" }, { status: 400 });
+}
 
-    const symbol: MarketLiveSymbol = symbolParam;
+const symbol: LiveMarketSymbol = symbolParam;
     const supabase = createSupabaseAdminClient();
 
     const readResult = await supabase
