@@ -3,9 +3,11 @@
 import { AlertTriangle, BarChart3, Database } from "lucide-react";
 
 import { IndicatorCard } from "@/components/indicator-card";
+import { LiveMarketIndicatorCard } from "@/components/live-market-indicator-card";
 import { MiniLogicMap } from "@/components/mini-logic-map";
 import { WidgetErrorBoundary } from "@/components/widget-error-boundary";
 import { getMiniLogicMapForLayer } from "@/lib/macro-flow";
+import { supportsLiveMarketQuote } from "@/lib/market-live-config";
 import type { LayerPagePayload } from "@/lib/layer-pages";
 
 export function LayerDashboard({
