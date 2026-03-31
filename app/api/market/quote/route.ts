@@ -23,7 +23,7 @@ type MarketLatestRow = {
 function isFreshEnough(updatedAt: string | null | undefined): boolean {
   if (!updatedAt) {
     return false;
-  }
+  } 
 
   const updatedMs = new Date(updatedAt).getTime();
 
