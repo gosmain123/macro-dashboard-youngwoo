@@ -11,16 +11,22 @@ export function LiveGoldIndicatorCard({
 }: {
   indicator: MacroIndicator;
 }) {
-  const { data: quoteData } = useMarketQuote("gold", 15000);
+  const {
+    data: quoteData,
+    loading: quoteLoading,
+    error: quoteError
+  } = useMarketQuote("gold", 15000);
 
   const patchedIndicator = useMemo<MacroIndicator>(() => {
+    const hasSeedValue = Number.isFinite(indicator.currentValue);
+    const useDegradedLiveState = !quoteData && hasSeedValue && (quoteLoading || Boolean(quoteError));
     const updatedAt = quoteData?.as_of ?? indicator.updatedAt;
 
     return {
       ...indicator,
       currentValue: quoteData?.price ?? indicator.currentValue,
-      status: quoteData ? "live" : indicator.status,
-      dataStatus: quoteData ? "live" : indicator.dataStatus,
+      status: quoteData ? "live" : useDegradedLiveState ? "stale-live" : indicator.status,
+      dataStatus: quoteData ? "live" : useDegradedLiveState ? "stale-live" : indicator.dataStatus,
       freshnessStatus: quoteData ? "fresh" : indicator.freshnessStatus,
       updatedAt,
       lastUpdated: updatedAt,
@@ -39,10 +45,14 @@ export function LiveGoldIndicatorCard({
         name: quoteData?.source_name ?? "Twelve Data",
         url: quoteData?.source_url ?? indicator.source.url
       },
-      fallbackUsageReason: quoteData ? undefined : indicator.fallbackUsageReason,
-      errorMessage: quoteData ? undefined : indicator.errorMessage
+      fallbackUsageReason: quoteData
+        ? undefined
+        : quoteError
+          ? "Live quote is temporarily unavailable. Showing the last available value."
+          : indicator.fallbackUsageReason,
+      errorMessage: quoteData || quoteLoading ? undefined : (quoteError ?? indicator.errorMessage)
     };
-  }, [indicator, quoteData]);
+  }, [indicator, quoteData, quoteLoading, quoteError]);
 
   return <IndicatorCard indicator={patchedIndicator} />;
 }
