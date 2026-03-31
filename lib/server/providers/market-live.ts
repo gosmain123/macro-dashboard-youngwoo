@@ -88,6 +88,8 @@ function getVendorSymbol(symbol: LiveMarketSymbol): string {
   switch (symbol) {
     case "gold":
       return "XAU/USD";
+    case "vix":
+      return "VIX";
     default:
       throw new Error("Unsupported market live symbol.");
   }
