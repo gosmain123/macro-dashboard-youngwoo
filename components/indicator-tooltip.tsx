@@ -18,7 +18,7 @@ import {
   supportsLiveMarketHistory
 } from "@/lib/market-live-config";
 
-
+ 
 const closeDelayMs = 180;
 
 const detailSections = [
