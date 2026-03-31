@@ -72,7 +72,8 @@ export function IndicatorCard({
 
       <div className="surface-inset mt-4 overflow-hidden rounded-[20px] px-3 py-2">
 <WidgetErrorBoundary compact title="Chart unavailable" description="This card is still usable without the mini chart.">
-  {supportsLiveMarketHistory(indicator.slug) && indicator.status === "live" ? (
+ {supportsLiveMarketHistory(indicator.slug) &&
+(indicator.status === "live" || indicator.status === "stale-live") ? (
     <LiveMarketHistoryChart
       slug={indicator.slug}
       symbol={getLiveMarketSymbolBySlug(indicator.slug)!}
