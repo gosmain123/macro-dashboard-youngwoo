@@ -1,7 +1,6 @@
 const TWELVE_DATA_BASE_URL = "https://api.twelvedata.com";
 const MARKET_HISTORY_TIMEZONE = "UTC";
-
-export type MarketLiveSymbol = "gold";
+import type { LiveMarketSymbol } from "@/lib/market-live-config";
 
 export type MarketHistoryRange =
   | "1H"
@@ -85,7 +84,7 @@ function getApiKey(): string {
   return apiKey;
 }
 
-function getVendorSymbol(symbol: MarketLiveSymbol): string {
+function getVendorSymbol(symbol: LiveMarketSymbol): string {
   switch (symbol) {
     case "gold":
       return "XAU/USD";
@@ -135,7 +134,7 @@ function dedupePoints(points: MarketHistoryPoint[]) {
   return [...map.values()].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
-export async function fetchMarketLiveQuote(symbol: MarketLiveSymbol): Promise<MarketLiveQuote> {
+export async function fetchMarketLiveQuote(symbol: LiveMarketSymbol): Promise<MarketLiveQuote> {
   const apiKey = getApiKey();
   const vendorSymbol = getVendorSymbol(symbol);
 
@@ -178,7 +177,7 @@ export async function fetchMarketLiveQuote(symbol: MarketLiveSymbol): Promise<Ma
 }
 
 export async function fetchMarketLiveHistory(
-  symbol: MarketLiveSymbol,
+  symbol: LiveMarketSymbol,
   range: MarketHistoryRange
 ): Promise<MarketHistoryPoint[]> {
   const apiKey = getApiKey();
