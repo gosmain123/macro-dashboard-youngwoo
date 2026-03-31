@@ -75,7 +75,7 @@ const RELEASE_DRIVEN_SLUGS = new Set([
 ]);
 
 const LIVE_MARKET_SYMBOL_BY_SLUG = {
-  gold: "gold"
+  gold: "gold",
   vix: "vix"
 } as const satisfies Partial<Record<string, LiveMarketSymbol>>;
 
