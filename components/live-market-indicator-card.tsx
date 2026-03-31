@@ -3,21 +3,21 @@
 import { useMemo } from "react";
 
 import { IndicatorCard } from "@/components/indicator-card";
-import { getLiveMarketSymbolBySlug, getLiveQuoteRefreshMs } from "@/lib/market-live-config";
+import {
+  getLiveMarketSymbolBySlug,
+  getLiveQuoteRefreshMs,
+  type LiveMarketSymbol
+} from "@/lib/market-live-config";
 import { useMarketQuote } from "@/lib/hooks/use-market-quote";
 import type { MacroIndicator } from "@/types/macro";
 
-export function LiveMarketIndicatorCard({
-  indicator
+function LiveMarketIndicatorCardInner({
+  indicator,
+  symbol
 }: {
   indicator: MacroIndicator;
+  symbol: LiveMarketSymbol;
 }) {
-  const symbol = getLiveMarketSymbolBySlug(indicator.slug);
-
-  if (!symbol) {
-    return <IndicatorCard indicator={indicator} />;
-  }
-
   const {
     data: quoteData,
     loading: quoteLoading,
@@ -26,7 +26,9 @@ export function LiveMarketIndicatorCard({
 
   const patchedIndicator = useMemo<MacroIndicator>(() => {
     const hasSeedValue = Number.isFinite(indicator.currentValue);
-    const useDegradedLiveState = !quoteData && hasSeedValue && (quoteLoading || Boolean(quoteError));
+    const useDegradedLiveState =
+      !quoteData && hasSeedValue && (quoteLoading || Boolean(quoteError));
+
     const updatedAt = quoteData?.as_of ?? indicator.updatedAt;
 
     return {
@@ -62,4 +64,18 @@ export function LiveMarketIndicatorCard({
   }, [indicator, quoteData, quoteLoading, quoteError]);
 
   return <IndicatorCard indicator={patchedIndicator} />;
+}
+
+export function LiveMarketIndicatorCard({
+  indicator
+}: {
+  indicator: MacroIndicator;
+}) {
+  const symbol = getLiveMarketSymbolBySlug(indicator.slug);
+
+  if (!symbol) {
+    return <IndicatorCard indicator={indicator} />;
+  }
+
+  return <LiveMarketIndicatorCardInner indicator={indicator} symbol={symbol} />;
 }
