@@ -76,7 +76,7 @@ const RELEASE_DRIVEN_SLUGS = new Set([
 
 const LIVE_MARKET_SYMBOL_BY_SLUG = {
   gold: "gold"
-  vix: "vis"
+  vix: "vix"
 } as const satisfies Partial<Record<string, LiveMarketSymbol>>;
 
 export function getIndicatorUpdateTier(slug: string): IndicatorUpdateTier {
