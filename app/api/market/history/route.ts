@@ -6,6 +6,8 @@ import {
   type MarketLiveSymbol
 } from "@/lib/server/providers/market-live";
 
+import { isSupportedLiveMarketSymbol } from "@/lib/market-live-config";
+
 const SUPPORTED_RANGES: MarketHistoryRange[] = [
   "1H",
   "4H",
@@ -33,12 +35,11 @@ function isSupportedRange(value: string | null): value is MarketHistoryRange {
 export async function GET(request: NextRequest) {
   try {
     const symbolParam = request.nextUrl.searchParams.get("symbol");
-    const rangeParam = request.nextUrl.searchParams.get("range");
+const rangeParam = request.nextUrl.searchParams.get("range");
 
-    if (!isSupportedSymbol(symbolParam)) {
-      return NextResponse.json({ error: "Unsupported symbol" }, { status: 400 });
-    }
-
+if (!isSupportedLiveMarketSymbol(symbolParam)) {
+  return NextResponse.json({ error: "Unsupported symbol" }, { status: 400 });
+}
     if (!isSupportedRange(rangeParam)) {
       return NextResponse.json({ error: "Unsupported range" }, { status: 400 });
     }
