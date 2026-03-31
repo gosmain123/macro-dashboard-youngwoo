@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
- 
+
 export type MarketHistoryRange =
   | "1H"
   | "4H"
@@ -32,19 +32,24 @@ export function useMarketHistory(
   const [data, setData] = useState<MarketHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const cacheRef = useRef<Map<string, MarketHistoryResponse>>(new Map());
+  const retryTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     let active = true;
     const cacheKey = `${symbol}:${range}`;
 
-    async function fetchHistory() {
+    async function fetchHistory(isRetry = false) {
       try {
         const cached = cacheRef.current.get(cacheKey);
 
         if (cached && active) {
           setData(cached);
+          setError(null);
           setLoading(false);
+        } else if (active) {
+          setLoading((prev) => (data ? prev : true));
         }
 
         const response = await fetch(`/api/market/history?symbol=${symbol}&range=${range}`, {
@@ -65,23 +70,38 @@ export function useMarketHistory(
           setLoading(false);
         }
       } catch (err) {
-        if (active) {
-          setError(err instanceof Error ? err.message : "Unknown market history error.");
-          setLoading(false);
+        if (!active) {
+          return;
+        }
+
+        setError(err instanceof Error ? err.message : "Unknown market history error.");
+        setLoading(false);
+
+        if (!isRetry) {
+          if (retryTimeoutRef.current) {
+            window.clearTimeout(retryTimeoutRef.current);
+          }
+
+          retryTimeoutRef.current = window.setTimeout(() => {
+            void fetchHistory(true);
+          }, 2500);
         }
       }
     }
 
-    setLoading(true);
-    void fetchHistory();
+    void fetchHistory(false);
 
     const id = window.setInterval(() => {
-      void fetchHistory();
+      void fetchHistory(false);
     }, refreshMs);
 
     return () => {
       active = false;
       window.clearInterval(id);
+
+      if (retryTimeoutRef.current) {
+        window.clearTimeout(retryTimeoutRef.current);
+      }
     };
   }, [symbol, range, refreshMs]);
 
