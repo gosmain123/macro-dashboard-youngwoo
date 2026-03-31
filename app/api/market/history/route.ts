@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  fetchMarketLiveHistory,
-  type MarketHistoryRange,
-  type MarketLiveSymbol
-} from "@/lib/server/providers/market-live";
-
+import { fetchMarketLiveHistory, type MarketHistoryRange } from "@/lib/server/providers/market-live";
 import { isSupportedLiveMarketSymbol } from "@/lib/market-live-config";
 
 const SUPPORTED_RANGES: MarketHistoryRange[] = [
@@ -24,10 +19,6 @@ const SUPPORTED_RANGES: MarketHistoryRange[] = [
   "MAX"
 ];
 
-function isSupportedSymbol(value: string | null): value is MarketLiveSymbol {
-  return value === "gold";
-}
-
 function isSupportedRange(value: string | null): value is MarketHistoryRange {
   return value !== null && SUPPORTED_RANGES.includes(value as MarketHistoryRange);
 }
@@ -35,11 +26,12 @@ function isSupportedRange(value: string | null): value is MarketHistoryRange {
 export async function GET(request: NextRequest) {
   try {
     const symbolParam = request.nextUrl.searchParams.get("symbol");
-const rangeParam = request.nextUrl.searchParams.get("range");
+    const rangeParam = request.nextUrl.searchParams.get("range");
 
-if (!isSupportedLiveMarketSymbol(symbolParam)) {
-  return NextResponse.json({ error: "Unsupported symbol" }, { status: 400 });
-}
+    if (!isSupportedLiveMarketSymbol(symbolParam)) {
+      return NextResponse.json({ error: "Unsupported symbol" }, { status: 400 });
+    }
+
     if (!isSupportedRange(rangeParam)) {
       return NextResponse.json({ error: "Unsupported range" }, { status: 400 });
     }
