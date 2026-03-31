@@ -108,7 +108,7 @@ export function supportsLiveMarketHistory(slug: string): boolean {
 }
 
 export function isSupportedLiveMarketSymbol(value: string | null): value is LiveMarketSymbol {
-  return value === "gold";
+  return value === "gold" || value === "vix";
 }
 
 export function getLiveQuoteRefreshMs(slug: string): number {
