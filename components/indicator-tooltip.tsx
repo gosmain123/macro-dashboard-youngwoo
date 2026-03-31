@@ -13,6 +13,10 @@ import { getHistoricalContext, getIndicatorSourceType } from "@/lib/indicator-in
 import { getFollowUpLogic } from "@/lib/playbook-guide";
 import { cn, formatFreshnessAge, formatIndicatorValue, formatReleaseLabel, formatTimestamp, titleCase } from "@/lib/utils";
 import type { MacroIndicator } from "@/types/macro"; 
+import {
+  getLiveMarketSymbolBySlug,
+  supportsLiveMarketHistory
+} from "@/lib/market-live-config";
 
 
 const closeDelayMs = 180;
@@ -339,8 +343,13 @@ export function IndicatorTooltip({
                   </div>
 
                   <div className="surface-card min-w-0 overflow-hidden rounded-[22px] p-4">
-{indicator.slug === "gold" && indicator.status === "live" ? (
-  <LiveMarketHistoryChart symbol="gold" unit={indicator.unit} variant="detail" />
+{supportsLiveMarketHistory(indicator.slug) && indicator.status === "live" ? (
+  <LiveMarketHistoryChart
+    slug={indicator.slug}
+    symbol={getLiveMarketSymbolBySlug(indicator.slug)!}
+    unit={indicator.unit}
+    variant="detail"
+  />
 ) : (
   <SparklineChart
     data={safeChartHistory}
