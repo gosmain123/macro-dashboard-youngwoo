@@ -9,7 +9,7 @@ import {
 } from "@/lib/hooks/use-market-history";
 
 type ChartPoint = {
-  date: string; 
+  date: string;
   value: number;
 };
 
@@ -89,7 +89,10 @@ function projectPoints(
   const values = data.map((point) => point.value);
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
-  const pad = maxValue === minValue ? Math.max(Math.abs(maxValue) * 0.02, 1) : (maxValue - minValue) * 0.12;
+  const pad =
+    maxValue === minValue
+      ? Math.max(Math.abs(maxValue) * 0.02, 1)
+      : (maxValue - minValue) * 0.12;
   const domainMin = minValue - pad;
   const domainMax = maxValue + pad;
   const denominator = Math.max(domainMax - domainMin, 1);
@@ -192,16 +195,25 @@ export function LiveMarketHistoryChart({
 }) {
   const compact = variant === "compact";
   const dimensions = compact ? compactDimensions : detailDimensions;
-  const [selectedRange, setSelectedRange] = useState<MarketHistoryRange>(compact ? "1D" : "1D");
+  const [selectedRange, setSelectedRange] = useState<MarketHistoryRange>("1D");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const gradientId = useId().replace(/:/g, "");
-  const { data, loading, error } = useMarketHistory(symbol, selectedRange, compact ? 60000 : 30000);
 
-const visibleData = useMemo(() => data?.points ?? [], [data?.points]);
-const canRenderChart = visibleData.length >= 2;
+  const { data, loading, error } = useMarketHistory(
+    symbol,
+    selectedRange,
+    compact ? 60000 : 30000
+  );
+
+  const visibleData = useMemo(() => data?.points ?? [], [data?.points]);
+  const renderRange = data?.range ?? selectedRange;
+  const canRenderChart = visibleData.length >= 2;
 
   const projected = useMemo(
-    () => (canRenderChart ? projectPoints(visibleData, dimensions.width, dimensions.height, dimensions.padding) : []),
+    () =>
+      canRenderChart
+        ? projectPoints(visibleData, dimensions.width, dimensions.height, dimensions.padding)
+        : [],
     [canRenderChart, dimensions.height, dimensions.padding, dimensions.width, visibleData]
   );
 
@@ -217,7 +229,7 @@ const canRenderChart = visibleData.length >= 2;
   const activePoint = visibleData[activeIndex];
   const activeProjected = projected[activeIndex];
 
-  if (loading && !data) {
+  if (loading && !canRenderChart) {
     return (
       <div className={cn("w-full", compact ? "h-24" : "h-56")}>
         <ChartUnavailable compact={compact} />
@@ -225,7 +237,7 @@ const canRenderChart = visibleData.length >= 2;
     );
   }
 
-  if (error || !canRenderChart) {
+  if (!canRenderChart) {
     return (
       <div className={cn("w-full", compact ? "h-24" : "h-56")}>
         <ChartUnavailable compact={compact} />
@@ -235,7 +247,7 @@ const canRenderChart = visibleData.length >= 2;
 
   return (
     <div className="space-y-3" data-chart-root="true">
-      {compact ? null : (
+      {!compact ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
@@ -244,6 +256,11 @@ const canRenderChart = visibleData.length >= 2;
             {activePoint ? (
               <p className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
                 {formatTooltipDate(activePoint.date)} · {formatIndicatorValue(activePoint.value, unit)}
+              </p>
+            ) : null}
+            {error ? (
+              <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+                Live refresh delayed. Showing the last available history.
               </p>
             ) : null}
           </div>
@@ -270,7 +287,7 @@ const canRenderChart = visibleData.length >= 2;
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
       <div className={cn("w-full", compact ? "h-24" : "h-56")}>
         <svg
@@ -366,12 +383,12 @@ const canRenderChart = visibleData.length >= 2;
 
       {!compact && visibleData.length >= 3 ? (
         <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-[color:var(--text-muted)]">
-          <span>{formatAxisDate(visibleData[0].date, selectedRange)}</span>
+          <span>{formatAxisDate(visibleData[0].date, renderRange)}</span>
           <span className="text-center">
-            {formatAxisDate(visibleData[Math.floor((visibleData.length - 1) / 2)].date, selectedRange)}
+            {formatAxisDate(visibleData[Math.floor((visibleData.length - 1) / 2)].date, renderRange)}
           </span>
           <span className="text-right">
-            {formatAxisDate(visibleData[visibleData.length - 1].date, selectedRange)}
+            {formatAxisDate(visibleData[visibleData.length - 1].date, renderRange)}
           </span>
         </div>
       ) : null}
