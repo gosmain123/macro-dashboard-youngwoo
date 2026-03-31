@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { LiveMarketSymbol } from "@/lib/market-live-config";
 
 export type MarketHistoryRange =
   | "1H"
@@ -25,7 +26,7 @@ type MarketHistoryResponse = {
 };
 
 export function useMarketHistory(
-  symbol: "gold",
+  symbol: LiveMarketSymbol,
   range: MarketHistoryRange,
   refreshMs = 30000
 ) {
@@ -49,7 +50,7 @@ export function useMarketHistory(
           setError(null);
           setLoading(false);
         } else if (active) {
-          setLoading((prev) => (data ? prev : true));
+          setLoading(true);
         }
 
         const response = await fetch(`/api/market/history?symbol=${symbol}&range=${range}`, {
