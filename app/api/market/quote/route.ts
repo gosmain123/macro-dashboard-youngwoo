@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { fetchMarketLiveQuote, type MarketLiveSymbol } from "@/lib/server/providers/market-live";
-import { createSupabaseAdminClient } from "@/lib/server/supabase";
+import { fetchMarketLiveQuote } from "@/lib/server/providers/market-live";
 import {
   isSupportedLiveMarketSymbol,
   type LiveMarketSymbol
 } from "@/lib/market-live-config";
+import { createSupabaseAdminClient } from "@/lib/server/supabase";
 const CACHE_SECONDS = 15;
 
 type MarketLatestRow = {
@@ -34,9 +34,6 @@ function isFreshEnough(updatedAt: string | null | undefined): boolean {
   return Date.now() - updatedMs <= CACHE_SECONDS * 1000;
 }
 
-function isSupportedSymbol(value: string | null): value is MarketLiveSymbol {
-  return value === "gold";
-}
 
 function toFiniteNumber(value: unknown): number | null {
   if (typeof value === "number") {
