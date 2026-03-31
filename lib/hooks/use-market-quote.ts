@@ -14,7 +14,7 @@ type MarketQuoteResponse = {
   cached: boolean;
   error?: string;
 };
-
+ 
 export function useMarketQuote(symbol: "gold", refreshMs = 15000) {
   const [data, setData] = useState<MarketQuoteResponse | null>(null);
   const [loading, setLoading] = useState(true);
